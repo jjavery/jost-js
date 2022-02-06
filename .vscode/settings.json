@@ -1,0 +1,16 @@
+{
+  "search.exclude": {
+    "**/lib": true
+  },
+  "editor.codeActionsOnSave": {
+    "source.sortImports": true,
+    "source.addMissingImports": true,
+  },
+  "files.associations": {
+    "*.jsonl": "jupyter"
+  },
+  "typescript.format.semicolons": "remove",
+  "prettier.semi": false,
+  "javascript.format.semicolons": "remove",
+  "prettier.singleQuote": true
+}
