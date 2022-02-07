@@ -1,12 +1,27 @@
 {
   "name": "jose-stream",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Node.js encrypted streams with JOSE (JWE, JWS, JWK) and JSONL",
+  "keywords": [
+    "encrypt",
+    "stream",
+    "JOSE",
+    "JWE",
+    "JWS",
+    "JWK"
+  ],
+  "homepage": "https://github.com/jjavery/jose-stream#readme",
+  "bugs": "https://github.com/jjavery/jose-stream/issues",
+  "repository": "jjavery/jose-stream",
+  "files": [
+    "lib"
+  ],
   "main": "lib/jose-stream.js",
   "scripts": {
+    "build": "tsc",
     "test": "mocha"
   },
-  "author": "James P. Javery <james.javery@gmail.com>",
+  "author": "James P. Javery <james.javery@gmail.com> (https://github.com/jjavery)",
   "license": "MIT",
   "devDependencies": {
     "@tsconfig/node14": "^1.0.1",
@@ -20,5 +35,8 @@
   "dependencies": {
     "bl": "^5.0.0",
     "jose": "^4.4.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   }
 }
