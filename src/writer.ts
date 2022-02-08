@@ -1,46 +1,124 @@
 import BufferList from 'bl/BufferList'
-import { createHash, generateKey, KeyObject } from 'crypto'
+import {
+  createHash,
+  generateKey as generateKeyCallback,
+  KeyObject
+} from 'crypto'
 import { FlattenedEncrypt, FlattenedSign, GeneralEncrypt } from 'jose'
 import { Transform, TransformCallback } from 'stream'
-import { callbackify, promisify, TextEncoder } from 'util'
+import { promisify } from 'util'
 
-const generateKeyPromise = promisify(generateKey)
+const generateKey = promisify(generateKeyCallback)
 
 const defaultChunkSize = 64 * 1024
-// const defaultChunkSize = 256
-
-interface KeyPair {
-  publicKey: KeyObject
-  privateKey: KeyObject
-}
 
 interface JoseStreamWriterOptions {
   chunkSize?: number
-  signingKeyPair?: KeyPair
-  recipients: KeyObject[]
+  recipient: RecipientOptions[]
+  encryption: EncryptionOptions
+  signature?: SignatureOptions
+}
+
+export interface RecipientOptions {
+  key: KeyObject
+  alg:
+    | 'RSA1_5'
+    | 'RSA-OAEP'
+    | 'RSA-OAEP-256'
+    | 'A128KW'
+    | 'A192KW'
+    | 'A256KW'
+    | 'dir'
+    | 'ECDH-ES'
+    | 'ECDH-ES+A128KW'
+    | 'ECDH-ES+A192KW'
+    | 'ECDH-ES+A256KW'
+    | 'A128GCMKW'
+    | 'A192GCMKW'
+    | 'A256GCMKW'
+    | 'PBES2-HS256+A128KW'
+    | 'PBES2-HS384+A384KW'
+    | 'PBES2-HS512+A256KW'
+  kid?: string
+}
+
+export interface EncryptionOptions {
+  enc:
+    | 'A128CBC-HS256'
+    | 'A192CBC-HS384'
+    | 'A256CBC-HS512'
+    | 'A128GCM'
+    | 'A192GCM'
+    | 'A256GCM'
+}
+
+export interface SignatureOptions {
+  publicKey?: KeyObject
+  privateKey?: KeyObject
+  secretKey?: KeyObject
+  alg:
+    | 'HS256'
+    | 'HS384'
+    | 'HS512'
+    | 'RS256'
+    | 'RS384'
+    | 'RS512'
+    | 'ES256'
+    | 'ES384'
+    | 'ES512'
+    | 'PS256'
+    | 'PS384'
+    | 'PS512'
+    | 'EdDSA'
+  crv?: 'Ed25519' | 'Ed448'
+  ciphertextHash?:
+    | 'sha256'
+    | 'sha384'
+    | 'sha512'
+    | 'sha512-256'
+    | 'blake2b512'
+    | 'blake2s256'
+  plaintextHash?:
+    | 'sha256'
+    | 'sha384'
+    | 'sha512'
+    | 'sha512-256'
+    | 'blake2b512'
+    | 'blake2s256'
 }
 
 export default class JoseStreamWriter extends Transform {
   private _chunkSize: number
-  private _signingKeyPair?: KeyPair
-  private _recipients: KeyObject[]
+  private _recipientOptions: RecipientOptions[]
+  private _encryptionOptions: EncryptionOptions
+  private _signatureOptions?: SignatureOptions
   private _ephemeralKey: KeyObject | null = null
-  private _buffer: BufferList
+  private _buffer = new BufferList()
   private _state = 0
   private _seq = 0
-  private _hash
-  private _pushCallback
+  private _ciphertextHash
+  private _plaintextHash
 
   constructor(options: JoseStreamWriterOptions) {
     super()
 
     this._chunkSize = options.chunkSize ?? defaultChunkSize
-    this._signingKeyPair = options.signingKeyPair
-    this._recipients = options.recipients
-    this._buffer = new BufferList()
-    this._hash = createHash('sha256')
+    this._recipientOptions = options.recipient
+    this._encryptionOptions = options.encryption
+    this._signatureOptions = options.signature
 
-    this._pushCallback = callbackify(this._push).bind(this)
+    if (
+      this._signatureOptions != null &&
+      (this._signatureOptions.publicKey != null ||
+        this._signatureOptions.secretKey != null)
+    ) {
+      if (this._signatureOptions.ciphertextHash != null) {
+        this._ciphertextHash = createHash(this._signatureOptions.ciphertextHash)
+      }
+      if (this._signatureOptions.plaintextHash != null) {
+        this._plaintextHash = createHash(this._signatureOptions.plaintextHash)
+      }
+    }
   }
 
   _transform(
@@ -55,6 +133,17 @@ export default class JoseStreamWriter extends Transform {
     this._pushCallback(null, callback)
   }
 
+  private _pushCallback(chunk: Buffer | null, callback: Function) {
+    this._push(chunk).then(
+      () => {
+        callback()
+      },
+      (err) => {
+        callback(err)
+      }
+    )
+  }
+
   private async _push(chunk: Buffer | null) {
     if (this._state === 0) {
       await this._writeHeader()
@@ -65,7 +154,10 @@ export default class JoseStreamWriter extends Transform {
       const chunkSize = this._chunkSize
       const buffer = this._buffer
 
-      if (chunk != null && chunk.length > 0) buffer.append(chunk)
+      if (chunk != null && chunk.length > 0) {
+        buffer.append(chunk)
+        this._updatePlaintextHash(chunk)
+      }
 
       while (buffer.length > (this.writableEnded ? 0 : chunkSize)) {
         const chunk = buffer.slice(0, chunkSize)
@@ -79,41 +171,61 @@ export default class JoseStreamWriter extends Transform {
     }
 
     if (this._state === 2) {
-      await this._writeSignature()
+      await this._writePlaintextSignature()
+      ++this._state
+    }
+
+    if (this._state === 3) {
+      await this._writeCiphertextSignature()
       ++this._state
     }
   }
 
   private async _writeHeader() {
-    this._ephemeralKey = await generateKeyPromise('aes', { length: 256 })
+    const length = parseInt(this._encryptionOptions.enc.substring(1, 4), 10)
+    this._ephemeralKey = await generateKey('aes', { length })
     const jwk = this._ephemeralKey.export({ format: 'jwk' })
 
-    const plaintext = new TextEncoder().encode(JSON.stringify(jwk))
+    const plaintext = Buffer.from(JSON.stringify(jwk), 'utf-8')
 
     delete jwk.k
 
-    let pub;
+    let pub, hashp, hashc
 
-    if (this._signingKeyPair != null) {
-      pub = this._signingKeyPair.publicKey.export({ format: 'jwk' })
+    if (
+      this._signatureOptions != null &&
+      (this._signatureOptions.publicKey != null ||
+        this._signatureOptions.secretKey != null)
+    ) {
+      if (this._signatureOptions.publicKey != null) {
+        pub = this._signatureOptions.publicKey.export({ format: 'jwk' })
+      }
+      hashp = this._signatureOptions.plaintextHash
+      hashc = this._signatureOptions.ciphertextHash
     }
 
-    const encrypt = new GeneralEncrypt(plaintext).setProtectedHeader({
-      enc: 'A256GCM',
-      pub: pub
-    })
+    const protectedHeader = {
+      enc: this._encryptionOptions.enc,
+      pub,
+      hashp,
+      hashc
+    }
 
-    for (const recipient of this._recipients) {
+    const encrypt = new GeneralEncrypt(plaintext).setProtectedHeader(
+      protectedHeader
+    )
+
+    for (const recipient of this._recipientOptions) {
       encrypt
-        .addRecipient(recipient)
-        .setUnprotectedHeader({ alg: 'ECDH-ES+A256KW' })
+        .addRecipient(recipient.key)
+        .setUnprotectedHeader({ alg: recipient.alg, kid: recipient.kid })
     }
 
     const jwe = await encrypt.encrypt()
 
     plaintext.fill(0)
 
-    this._updateHash(jwe.tag)
+    this._updateCiphertextHash(jwe.tag)
 
     const json = JSON.stringify(jwe)
 
@@ -121,20 +233,26 @@ export default class JoseStreamWriter extends Transform {
     this.push('\n')
   }
 
-  private async _writeBody(chunk: Buffer, end: boolean) {
+  private async _writeBody(chunk: Buffer, end?: boolean, sig?: boolean) {
     const seq = this._seq++
 
-    const encrypt = new FlattenedEncrypt(chunk).setProtectedHeader({
+    const protectedHeader = {
       alg: 'dir',
-      enc: 'A256GCM',
-      end,
+      enc: this._encryptionOptions.enc,
+      end: end || undefined,
       seq,
-      zip: 'DEF'
-    })
+      sig: sig || undefined
+    }
+
+    const encrypt = new FlattenedEncrypt(chunk).setProtectedHeader(
+      protectedHeader
+    )
 
     const jwe = await encrypt.encrypt(this._ephemeralKey as KeyObject)
 
-    this._updateHash(jwe.tag)
+    // if (!sig) {
+      this._updateCiphertextHash(jwe.tag)
+    // }
 
     const json = JSON.stringify(jwe)
 
@@ -142,17 +260,46 @@ export default class JoseStreamWriter extends Transform {
     this.push('\n')
   }
 
-  private async _writeSignature() {
-    if (this._signingKeyPair == null) return;
+  private async _writePlaintextSignature() {
+    const options = this._signatureOptions
+    if (options == null || this._plaintextHash == null) return
 
-    const hash = this._hash.digest()
+    const digest = this._plaintextHash.digest()
 
-    const sign = new FlattenedSign(hash).setProtectedHeader({
-      alg: 'EdDSA',
-      crv: 'Ed25519'
-    })
+    const protectedHeader = {
+      alg: options.alg,
+      crv: options.crv
+    }
 
-    const jws = (await sign.sign(this._signingKeyPair.privateKey)) as any
+    const sign = new FlattenedSign(digest).setProtectedHeader(protectedHeader)
+
+    const jws: any = await sign.sign(
+      options.privateKey ?? (options.secretKey as KeyObject)
+    )
+
+    delete jws.payload
+
+    const json = JSON.stringify(jws)
+
+    await this._writeBody(Buffer.from(json, 'utf8'), false, true)
+  }
+
+  private async _writeCiphertextSignature() {
+    const options = this._signatureOptions
+    if (options == null || this._ciphertextHash == null) return
+
+    const digest = this._ciphertextHash.digest()
+
+    const protectedHeader = {
+      alg: options.alg,
+      crv: options.crv
+    }
+
+    const sign = new FlattenedSign(digest).setProtectedHeader(protectedHeader)
+
+    const jws: any = await sign.sign(
+      options.privateKey ?? (options.secretKey as KeyObject)
+    )
 
     delete jws.payload
 
@@ -162,7 +309,15 @@ export default class JoseStreamWriter extends Transform {
     this.push('\n')
   }
 
-  private _updateHash(tag: string) {
-    this._hash.update(Buffer.from(tag, 'base64url'))
+  private _updateCiphertextHash(tag: string) {
+    const hash = this._ciphertextHash
+    if (hash == null) return
+    hash.update(Buffer.from(tag, 'base64url'))
+  }
+
+  private _updatePlaintextHash(chunk: Buffer) {
+    const hash = this._plaintextHash
+    if (hash == null) return
+    hash.update(chunk)
   }
 }
