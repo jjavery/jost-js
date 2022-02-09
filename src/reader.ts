@@ -51,6 +51,9 @@ export default class JoseStreamReader extends Transform {
   private _seq = 0
   private _tagHash?: Hash
   private _contentHash?: Hash
+  private _headerTagVerified = false
+  private _finalTagVerified = false
+  private _contentVerified = false
   private _decompress?: Gunzip | Inflate | BrotliDecompress
 
   constructor(options: JoseStreamReaderOptions) {
@@ -111,6 +114,26 @@ export default class JoseStreamReader extends Transform {
       }
     }
 
+    if (end) {
+      if (this._state === 0) {
+        throw new FormatError('header is required')
+      } else if (this._state === 1) {
+        throw new FormatError('body is required')
+      }
+
+      if (this._tagHash != null) {
+        if (!this._finalTagVerified) {
+          throw new SignatureVerificationFailedError()
+        }
+      }
+
+      if (this._contentHash != null) {
+        if (!this._contentVerified) {
+          throw new SignatureVerificationFailedError()
+        }
+      }
+    }
+
     if (end && this._decompress != null) this._decompress.end()
   }
 
@@ -120,7 +143,7 @@ export default class JoseStreamReader extends Transform {
     )
 
     if (protectedHeader.seq !== this._seq) {
-      throw new FormatError()
+      throw new FormatError('incorrect sequence')
     }
     ++this._seq
 
@@ -129,7 +152,9 @@ export default class JoseStreamReader extends Transform {
         if (this._state !== 0) {
           throw new FormatError('only one header allowed')
         }
+
         await this._readHeader(obj)
+
         ++this._state
         break
 
@@ -137,16 +162,24 @@ export default class JoseStreamReader extends Transform {
         if (this._state === 0) {
           throw new FormatError('tag signature must not appear before header')
         }
+
         await this._readTagSignature(obj)
+
+        if (this._state === 1) this._headerTagVerified = true
+        else if (this._state === 3) this._finalTagVerified = true
+
         break
 
       case 'bdy':
         if (this._state === 0) {
           throw new FormatError('body must not appear before header')
-        }
-        if (this._state !== 1) {
+        } else if (this._state !== 1) {
           throw new FormatError('body must not appear after end')
         }
+        if (this._tagHash != null && this._headerTagVerified !== true) {
+          throw new SignatureVerificationFailedError()
+        }
+
         const { end, plaintext } = await this._readBody(obj)
 
         if (this._decompress != null) {
@@ -157,6 +190,7 @@ export default class JoseStreamReader extends Transform {
         }
 
         if (end) ++this._state
+
         break
 
       case 'con':
@@ -165,7 +199,11 @@ export default class JoseStreamReader extends Transform {
             'content signature must not appear before header or body'
           )
         }
+
         await this._readContentSignature(obj)
+
+        this._contentVerified = true
+
         ++this._state
         break
 
