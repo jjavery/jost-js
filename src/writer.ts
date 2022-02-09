@@ -116,6 +116,7 @@ export default class JoseStreamWriter extends Transform {
   private _tagHash
   private _contentHash
   private _compress
+  private _compressOutput
 
   constructor(options: JoseStreamWriterOptions) {
     super()
@@ -147,16 +148,20 @@ export default class JoseStreamWriter extends Transform {
         this._compressionOptions.options
       )
 
-      this._compress.on('data', (chunk) => {
-        this._compress?.pause()
-        this._pushCallback(chunk, false, () => {
-          this._compress?.resume()
-        })
+      this._compressOutput = new Stream.Writable({
+        write: (
+          chunk: any,
+          encoding: BufferEncoding,
+          callback: (error?: Error | null | undefined) => void
+        ) => {
+          this._pushCallback(chunk, false, callback)
+        },
+        final: (callback: (error?: Error | null | undefined) => void) => {
+          this._pushCallback(null, true, callback)
+        }
       })
 
-      this._compress.once('error', (err) => {
-        this.emit('error', err)
-      })
+      this._compress.pipe(this._compressOutput)
     }
   }
 
@@ -177,8 +182,8 @@ export default class JoseStreamWriter extends Transform {
   _flush(callback: TransformCallback): void {
     if (this._compress != null) {
       this._compress.end()
-      this._compress.once('end', () => {
-        this._pushCallback(null, true, callback)
+      this._compressOutput?.once('finish', () => {
+        queueMicrotask(callback)
       })
     } else {
       this._pushCallback(null, true, callback)
