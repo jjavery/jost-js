@@ -1,3 +1,4 @@
+import { doesNotMatch } from 'assert'
 import BufferList from 'bl/BufferList'
 import {
   createHash,
@@ -14,6 +15,15 @@ import {
   GeneralDecryptResult
 } from 'jose'
 import { Transform, TransformCallback } from 'stream'
+import { promisify } from 'util'
+import {
+  BrotliDecompress,
+  createBrotliDecompress,
+  createGunzip,
+  createInflate,
+  Gunzip,
+  Inflate
+} from 'zlib'
 import {
   BufferOverflowError,
   DecryptionFailedError,
@@ -36,17 +46,17 @@ export default class JoseStreamReader extends Transform {
   publicKey?: KeyObject
   private _decryptionKeyPairs: KeyPair[]
   private _ephemeralKey?: KeyObject
-  private _buffer: BufferList
+  private _bufferList = new BufferList()
   private _state = 0
   private _seq = 0
-  private _ciphertextHash?: Hash
-  private _plaintextHash?: Hash
+  private _tagHash?: Hash
+  private _contentHash?: Hash
+  private _decompress?: Gunzip | Inflate | BrotliDecompress
 
   constructor(options: JoseStreamReaderOptions) {
     super()
 
     this._decryptionKeyPairs = options.decryptionKeyPairs
-    this._buffer = new BufferList()
   }
 
   _transform(
@@ -54,74 +64,113 @@ export default class JoseStreamReader extends Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ): void {
-    this._pushCallback(chunk, callback)
+    this._pushCallback(chunk, false, callback)
   }
 
   _flush(callback: TransformCallback): void {
-    this._pushCallback(null, callback)
+    this._pushCallback(null, true, callback)
   }
 
-  private _pushCallback(chunk: Buffer | null, callback: TransformCallback) {
-    this._push(chunk).then(
+  private _pushCallback(
+    chunk: Buffer | null,
+    end: boolean,
+    callback: TransformCallback
+  ) {
+    this._push(chunk, end).then(
       () => {
-        callback()
+        queueMicrotask(callback)
       },
       (err) => {
-        callback(err)
+        queueMicrotask(() => callback(err))
       }
     )
   }
 
-  private async _push(chunk: Buffer | null) {
-    const buffer = this._buffer
+  private async _push(chunk: Buffer | null, end: boolean) {
+    const bl = this._bufferList
 
-    if (chunk != null && chunk.length > 0) {
-      buffer.append(chunk)
+    if (chunk != null && chunk.length > 0) bl.append(chunk)
+
+    if (bl.length > 0) {
+      for (let i; (i = end ? bl.length : bl.indexOf(10)), i !== -1; ) {
+        if (i > maxLineLength) {
+          throw new BufferOverflowError()
+        }
+
+        const line = bl.slice(0, i + 1)
+        bl.consume(i + 1)
+
+        const str = line.toString()
+
+        // Eat empty lines
+        if (str.length <= 2 && str.trim() === '') continue
+
+        const obj = JSON.parse(str)
+
+        await this._push2(obj)
+      }
     }
 
-    for (let i; (i = buffer.indexOf(10)), i !== -1; ) {
-      if (i > maxLineLength) {
-        throw new BufferOverflowError()
-      }
+    if (end && this._decompress != null) this._decompress.end()
+  }
 
-      const line = buffer.slice(0, i + 1)
-      buffer.consume(i + 1)
+  private async _push2(obj: any) {
+    const protectedHeader = JSON.parse(
+      Buffer.from(obj.protected, 'base64url').toString()
+    )
 
-      const str = line.toString()
+    if (protectedHeader.seq !== this._seq) {
+      throw new FormatError()
+    }
+    ++this._seq
 
-      // Eat empty lines
-      if (str.length <= 2 && str.trim() === '') continue
+    switch (protectedHeader.typ) {
+      case 'hdr':
+        if (this._state !== 0) {
+          throw new FormatError('only one header allowed')
+        }
+        await this._readHeader(obj)
+        ++this._state
+        break
 
-      const obj = JSON.parse(str)
+      case 'tag':
+        if (this._state === 0) {
+          throw new FormatError('tag signature must not appear before header')
+        }
+        await this._readTagSignature(obj)
+        break
 
-      switch (this._state) {
-        case 0:
-          await this._readHeader(obj)
-          ++this._state
-          break
-        case 1:
-          const { end, plaintext } = await this._readBody(obj)
+      case 'bdy':
+        if (this._state === 0) {
+          throw new FormatError('body must not appear before header')
+        }
+        if (this._state !== 1) {
+          throw new FormatError('body must not appear after end')
+        }
+        const { end, plaintext } = await this._readBody(obj)
+
+        if (this._decompress != null) {
+          await (this._decompress as any).writePromise(plaintext)
+        } else {
+          this._updateContentHash(plaintext)
           this.push(plaintext)
-          this._updatePlaintextHash(plaintext)
-          if (end) ++this._state
-          break
-        case 2:
-          if (this._plaintextHash != null) {
-            await this._readPlaintextSignature(obj)
-          } else if (this._ciphertextHash != null) {
-            await this._readCiphertextSignature(obj)
-          }
-          ++this._state
-          break
-        case 3:
-          if (this._plaintextHash != null) {
-            await this._readCiphertextSignature(obj)
-          }
-          ++this._state
-          break
-        default:
-          throw new Error('unexpected JSON block following end')
-      }
+        }
+
+        if (end) ++this._state
+        break
+
+      case 'con':
+        if (this._state !== 2) {
+          throw new FormatError(
+            'content signature must not appear before header or body'
+          )
+        }
+        await this._readContentSignature(obj)
+        ++this._state
+        break
+
+      default:
+        throw new Error(`unknown type '${protectedHeader.typ}'`)
     }
   }
 
@@ -154,7 +203,7 @@ export default class JoseStreamReader extends Transform {
     this._ephemeralKey = createSecretKey(jwk.k, 'base64url')
     delete jwk.k
 
-    const pub = (result.protectedHeader as any).pub
+    const { pub, hsh, cmp } = result.protectedHeader as any
 
     if (pub != null) {
       this.publicKey = createPublicKey({
@@ -163,20 +212,33 @@ export default class JoseStreamReader extends Transform {
       })
     }
 
-    const hashp = (result.protectedHeader as any).hashp
-    const hashc = (result.protectedHeader as any).hashc
+    if (hsh != null) {
+      const { con, tag } = hsh
 
-    if (hashp != null) this._plaintextHash = createHash(hashp)
-    if (hashc != null) this._ciphertextHash = createHash(hashc)
+      if (con != null) this._contentHash = createHash(con)
+      if (tag != null) this._tagHash = createHash(tag)
+    }
 
-    this._updateCiphertextHash(jwe.tag)
+    if (cmp != null) {
+      const decompress = (this._decompress = createDecompress(cmp))
+
+      ;(decompress as any).writePromise = promisify(decompress.write).bind(
+        decompress
+      )
+
+      decompress.on('data', (chunk) => {
+        this._updateContentHash(chunk)
+        this.push(chunk)
+      })
+    }
+
+    this._updateTagHash(jwe.tag)
   }
 
   private async _readBody(
     jwe: any
-  ): Promise<{ end: boolean; sig: boolean; plaintext: Uint8Array }> {
+  ): Promise<{ end: boolean; plaintext: Uint8Array }> {
     let end = false
-    let sig = false
 
     try {
       const result = await flattenedDecrypt(
@@ -184,28 +246,32 @@ export default class JoseStreamReader extends Transform {
         this._ephemeralKey as KeyObject
       )
 
-      if ((result.protectedHeader as any).sig === true) sig = true
       if ((result.protectedHeader as any).end === true) end = true
-      if ((result.protectedHeader as any).seq !== this._seq) {
-        throw new FormatError()
-      }
-      ++this._seq
 
-      this._updateCiphertextHash(jwe.tag)
+      this._updateTagHash(jwe.tag)
 
-      return { end, sig, plaintext: result.plaintext }
+      return { end, plaintext: result.plaintext }
     } catch (err) {
       throw new DecryptionFailedError()
     }
   }
 
-  private async _readPlaintextSignature(jwe: any) {
-    if (this._plaintextHash == null) return
+  private async _readContentSignature(jwe: any) {
+    if (this._contentHash == null) return
 
-    const { plaintext, sig } = await this._readBody(jwe)
+    let plaintext: Uint8Array
 
-    if (sig !== true) {
-      throw new Error('expected plaintext signature')
+    try {
+      const result = await flattenedDecrypt(
+        jwe,
+        this._ephemeralKey as KeyObject
+      )
+
+      this._updateTagHash(jwe.tag)
+
+      plaintext = result.plaintext
+    } catch (err) {
+      throw new DecryptionFailedError()
     }
 
     let jws
@@ -216,7 +282,7 @@ export default class JoseStreamReader extends Transform {
       throw new FormatError()
     }
 
-    const digest = this._plaintextHash.digest()
+    const digest = this._contentHash.digest()
 
     jws.payload = digest.toString('base64url')
 
@@ -227,10 +293,10 @@ export default class JoseStreamReader extends Transform {
     }
   }
 
-  private async _readCiphertextSignature(jws: any) {
-    if (this._ciphertextHash == null) return
+  private async _readTagSignature(jws: any) {
+    if (this._tagHash == null) return
 
-    const digest = this._ciphertextHash.digest()
+    const digest = this._tagHash.copy().digest()
 
     jws.payload = digest.toString('base64url')
 
@@ -241,15 +307,28 @@ export default class JoseStreamReader extends Transform {
     }
   }
 
-  private _updateCiphertextHash(tag: string) {
-    const hash = this._ciphertextHash
+  private _updateTagHash(tag: string) {
+    const hash = this._tagHash
     if (hash == null) return
     hash.update(Buffer.from(tag, 'base64url'))
   }
 
-  private _updatePlaintextHash(plaintext: Uint8Array) {
-    const hash = this._plaintextHash
+  private _updateContentHash(chunk: Uint8Array) {
+    const hash = this._contentHash
     if (hash == null) return
-    hash.update(plaintext)
+    hash.update(chunk)
+  }
+}
+
+function createDecompress(type: string): Gunzip | Inflate | BrotliDecompress {
+  switch (type) {
+    case 'gzip':
+      return createGunzip()
+    case 'deflate':
+      return createInflate()
+    case 'br':
+      return createBrotliDecompress()
+    default:
+      throw new Error(`unknown compression type '${type}'`)
   }
 }

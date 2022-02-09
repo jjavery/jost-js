@@ -5,14 +5,14 @@ import JoseStreamWriter, { RecipientOptions, SignatureOptions } from './writer'
 
 describe('JoseStreamWriter', () => {
   it('writes a JOSE stream', async () => {
+    const recipient: RecipientOptions = {
+      key: ecdhKeyPair.publicKey,
+      alg: 'ECDH-ES+A256KW',
+      kid: ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
+    }
+
     const joseStreamWriter = new JoseStreamWriter({
-      recipient: [
-        {
-          key: ecdhKeyPair.publicKey,
-          alg: 'ECDH-ES+A256KW',
-          kid: ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
-        }
-      ],
+      recipients: [recipient],
       encryption: {
         enc: 'A256GCM'
       },
@@ -21,10 +21,13 @@ describe('JoseStreamWriter', () => {
         privateKey: signingKeyPair.privateKey,
         alg: 'EdDSA',
         crv: 'Ed25519',
-        plaintextHash: 'blake2b512',
-        ciphertextHash: 'blake2b512'
+        contentHash: 'blake2b512',
+        tagHash: 'blake2b512'
       },
-      chunkSize: 256
+      compression: {
+        type: 'deflate'
+      },
+      // chunkSize: 256
     })
 
     const input = createReadStream('./test.txt')

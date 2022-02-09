@@ -5,8 +5,18 @@ import {
   KeyObject
 } from 'crypto'
 import { FlattenedEncrypt, FlattenedSign, GeneralEncrypt } from 'jose'
-import { Transform, TransformCallback } from 'stream'
+import { Stream, Transform, TransformCallback } from 'stream'
 import { promisify } from 'util'
+import {
+  BrotliCompress,
+  BrotliOptions,
+  createBrotliCompress,
+  createDeflate,
+  createGzip,
+  Deflate,
+  Gzip,
+  ZlibOptions
+} from 'zlib'
 
 const generateKey = promisify(generateKeyCallback)
 
@@ -14,9 +24,10 @@ const defaultChunkSize = 64 * 1024
 
 interface JoseStreamWriterOptions {
   chunkSize?: number
-  recipient: RecipientOptions[]
+  recipients: RecipientOptions[]
   encryption: EncryptionOptions
   signature?: SignatureOptions
+  compression?: CompressionOptions
 }
 
 export interface RecipientOptions {
@@ -71,14 +82,14 @@ export interface SignatureOptions {
     | 'PS512'
     | 'EdDSA'
   crv?: 'Ed25519' | 'Ed448'
-  ciphertextHash?:
+  tagHash?:
     | 'sha256'
     | 'sha384'
     | 'sha512'
     | 'sha512-256'
     | 'blake2b512'
     | 'blake2s256'
-  plaintextHash?:
+  contentHash?:
     | 'sha256'
     | 'sha384'
     | 'sha512'
@@ -87,37 +98,65 @@ export interface SignatureOptions {
     | 'blake2s256'
 }
 
+export interface CompressionOptions {
+  type: 'gzip' | 'deflate' | 'br'
+  options?: ZlibOptions | BrotliOptions
+}
+
 export default class JoseStreamWriter extends Transform {
   private _chunkSize: number
   private _recipientOptions: RecipientOptions[]
   private _encryptionOptions: EncryptionOptions
   private _signatureOptions?: SignatureOptions
+  private _compressionOptions?: CompressionOptions
   private _ephemeralKey: KeyObject | null = null
-  private _buffer = new BufferList()
+  private _bufferList = new BufferList()
   private _state = 0
   private _seq = 0
-  private _ciphertextHash
-  private _plaintextHash
+  private _tagHash
+  private _contentHash
+  private _compress
 
   constructor(options: JoseStreamWriterOptions) {
     super()
 
     this._chunkSize = options.chunkSize ?? defaultChunkSize
-    this._recipientOptions = options.recipient
+    this._recipientOptions = options.recipients
     this._encryptionOptions = options.encryption
     this._signatureOptions = options.signature
+    this._compressionOptions = options.compression
 
+    // Initialize signatures
     if (
       this._signatureOptions != null &&
       (this._signatureOptions.publicKey != null ||
         this._signatureOptions.secretKey != null)
     ) {
-      if (this._signatureOptions.ciphertextHash != null) {
-        this._ciphertextHash = createHash(this._signatureOptions.ciphertextHash)
+      if (this._signatureOptions.tagHash != null) {
+        this._tagHash = createHash(this._signatureOptions.tagHash)
       }
-      if (this._signatureOptions.plaintextHash != null) {
-        this._plaintextHash = createHash(this._signatureOptions.plaintextHash)
+      if (this._signatureOptions.contentHash != null) {
+        this._contentHash = createHash(this._signatureOptions.contentHash)
       }
+    }
+
+    // Initialize compression
+    if (this._compressionOptions != null) {
+      this._compress = createCompress(
+        this._compressionOptions.type,
+        this._compressionOptions.options
+      )
+
+      this._compress.on('data', (chunk) => {
+        this._compress?.pause()
+        this._pushCallback(chunk, false, () => {
+          this._compress?.resume()
+        })
+      })
+
+      this._compress.once('error', (err) => {
+        this.emit('error', err)
+      })
     }
   }
 
@@ -126,62 +165,66 @@ export default class JoseStreamWriter extends Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ): void {
-    this._pushCallback(chunk, callback)
+    this._updateContentHash(chunk)
+
+    if (this._compress != null) {
+      this._compress.write(chunk, callback)
+    } else {
+      this._pushCallback(chunk, false, callback)
+    }
   }
 
   _flush(callback: TransformCallback): void {
-    this._pushCallback(null, callback)
+    if (this._compress != null) {
+      this._compress.end()
+      this._compress.once('end', () => {
+        this._pushCallback(null, true, callback)
+      })
+    } else {
+      this._pushCallback(null, true, callback)
+    }
   }
 
-  private _pushCallback(chunk: Buffer | null, callback: Function) {
-    this._push(chunk).then(
+  private _pushCallback(
+    chunk: Buffer | null,
+    end: boolean,
+    callback: (err?: any) => void
+  ) {
+    this._push(chunk, end).then(
       () => {
-        callback()
+        queueMicrotask(callback)
       },
       (err) => {
-        callback(err)
+        queueMicrotask(() => callback(err))
       }
     )
   }
 
-  private async _push(chunk: Buffer | null) {
+  private async _push(chunk: Buffer | null, end: boolean) {
     if (this._state === 0) {
-      await this._writeHeader()
       ++this._state
+
+      await this._writeHeader()
+      await this._writeTagSignature()
     }
 
     if (this._state === 1) {
-      const chunkSize = this._chunkSize
-      const buffer = this._buffer
+      if (end) ++this._state
 
-      if (chunk != null && chunk.length > 0) {
-        buffer.append(chunk)
-        this._updatePlaintextHash(chunk)
-      }
-
-      while (buffer.length > (this.writableEnded ? 0 : chunkSize)) {
-        const chunk = buffer.slice(0, chunkSize)
-        buffer.consume(chunkSize)
-
-        const end = this.writableEnded && buffer.length === 0
-
-        await this._writeBody(chunk, end)
-        if (end) ++this._state
-      }
+      await this._writeBody(chunk, end)
     }
 
     if (this._state === 2) {
-      await this._writePlaintextSignature()
       ++this._state
-    }
 
-    if (this._state === 3) {
-      await this._writeCiphertextSignature()
-      ++this._state
+      await this._writeContentSignature()
+      await this._writeTagSignature()
     }
   }
 
   private async _writeHeader() {
+    const seq = this._seq++
+
     const length = parseInt(this._encryptionOptions.enc.substring(1, 4), 10)
     this._ephemeralKey = await generateKey('aes', { length })
     const jwk = this._ephemeralKey.export({ format: 'jwk' })
@@ -190,7 +233,7 @@ export default class JoseStreamWriter extends Transform {
 
     delete jwk.k
 
-    let pub, hashp, hashc
+    let pub, hsh, contentHash, tagHash
 
     if (
       this._signatureOptions != null &&
@@ -200,15 +243,24 @@ export default class JoseStreamWriter extends Transform {
       if (this._signatureOptions.publicKey != null) {
         pub = this._signatureOptions.publicKey.export({ format: 'jwk' })
       }
-      hashp = this._signatureOptions.plaintextHash
-      hashc = this._signatureOptions.ciphertextHash
+      contentHash = this._signatureOptions.contentHash
+      tagHash = this._signatureOptions.tagHash
+    }
+
+    if (contentHash != null || tagHash != null) {
+      hsh = {
+        con: contentHash,
+        tag: tagHash
+      }
     }
 
     const protectedHeader = {
+      typ: 'hdr',
       enc: this._encryptionOptions.enc,
       pub,
-      hashp,
-      hashc
+      hsh,
+      cmp: this._compressionOptions?.type,
+      seq
     }
 
     const encrypt = new GeneralEncrypt(plaintext).setProtectedHeader(
@@ -225,7 +277,7 @@ export default class JoseStreamWriter extends Transform {
 
     plaintext.fill(0)
 
-    this._updateCiphertextHash(jwe.tag)
+    this._updateTagHash(jwe.tag)
 
     const json = JSON.stringify(jwe)
 
@@ -233,15 +285,29 @@ export default class JoseStreamWriter extends Transform {
     this.push('\n')
   }
 
-  private async _writeBody(chunk: Buffer, end?: boolean, sig?: boolean) {
+  private async _writeBody(chunk: Buffer | null, end: boolean) {
+    const chunkSize = this._chunkSize
+    const bl = this._bufferList
+
+    if (chunk != null && chunk.length > 0) bl.append(chunk)
+
+    while (bl.length > (end ? 0 : chunkSize)) {
+      const chunk = bl.slice(0, chunkSize)
+      bl.consume(chunkSize)
+
+      await this._writeBody2(chunk, end && bl.length === 0)
+    }
+  }
+
+  private async _writeBody2(chunk: Buffer, end: boolean) {
     const seq = this._seq++
 
     const protectedHeader = {
+      typ: 'bdy',
       alg: 'dir',
       enc: this._encryptionOptions.enc,
       end: end || undefined,
-      seq,
-      sig: sig || undefined
+      seq
     }
 
     const encrypt = new FlattenedEncrypt(chunk).setProtectedHeader(
@@ -250,9 +316,7 @@ export default class JoseStreamWriter extends Transform {
 
     const jwe = await encrypt.encrypt(this._ephemeralKey as KeyObject)
 
-    // if (!sig) {
-      this._updateCiphertextHash(jwe.tag)
-    // }
+    this._updateTagHash(jwe.tag)
 
     const json = JSON.stringify(jwe)
 
@@ -260,11 +324,11 @@ export default class JoseStreamWriter extends Transform {
     this.push('\n')
   }
 
-  private async _writePlaintextSignature() {
+  private async _writeContentSignature() {
     const options = this._signatureOptions
-    if (options == null || this._plaintextHash == null) return
+    if (options == null || this._contentHash == null) return
 
-    const digest = this._plaintextHash.digest()
+    const digest = this._contentHash.digest()
 
     const protectedHeader = {
       alg: options.alg,
@@ -281,18 +345,46 @@ export default class JoseStreamWriter extends Transform {
 
     const json = JSON.stringify(jws)
 
-    await this._writeBody(Buffer.from(json, 'utf8'), false, true)
+    await this._writeContentSignature2(Buffer.from(json, 'utf8'))
   }
 
-  private async _writeCiphertextSignature() {
-    const options = this._signatureOptions
-    if (options == null || this._ciphertextHash == null) return
-
-    const digest = this._ciphertextHash.digest()
+  private async _writeContentSignature2(chunk: Buffer) {
+    const seq = this._seq++
 
     const protectedHeader = {
+      typ: 'con',
+      alg: 'dir',
+      enc: this._encryptionOptions.enc,
+      seq
+    }
+
+    const encrypt = new FlattenedEncrypt(chunk).setProtectedHeader(
+      protectedHeader
+    )
+
+    const jwe = await encrypt.encrypt(this._ephemeralKey as KeyObject)
+
+    this._updateTagHash(jwe.tag)
+
+    const json = JSON.stringify(jwe)
+
+    this.push(json)
+    this.push('\n')
+  }
+
+  private async _writeTagSignature() {
+    const seq = this._seq++
+
+    const options = this._signatureOptions
+    if (options == null || this._tagHash == null) return
+
+    const digest = this._tagHash.copy().digest()
+
+    const protectedHeader = {
+      typ: 'tag',
       alg: options.alg,
-      crv: options.crv
+      crv: options.crv,
+      seq
     }
 
     const sign = new FlattenedSign(digest).setProtectedHeader(protectedHeader)
@@ -309,15 +401,31 @@ export default class JoseStreamWriter extends Transform {
     this.push('\n')
   }
 
-  private _updateCiphertextHash(tag: string) {
-    const hash = this._ciphertextHash
+  private _updateTagHash(tag: string) {
+    const hash = this._tagHash
     if (hash == null) return
     hash.update(Buffer.from(tag, 'base64url'))
   }
 
-  private _updatePlaintextHash(chunk: Buffer) {
-    const hash = this._plaintextHash
+  private _updateContentHash(chunk: Buffer) {
+    const hash = this._contentHash
     if (hash == null) return
     hash.update(chunk)
+  }
+}
+
+function createCompress(
+  type: string,
+  options: ZlibOptions | BrotliOptions | undefined
+): Gzip | Deflate | BrotliCompress {
+  switch (type) {
+    case 'gzip':
+      return createGzip(options)
+    case 'deflate':
+      return createDeflate(options)
+    case 'br':
+      return createBrotliCompress(options)
+    default:
+      throw new Error(`unknown compression type '${type}'`)
   }
 }
