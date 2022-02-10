@@ -1,4 +1,3 @@
-import { doesNotMatch } from 'assert'
 import BufferList from 'bl/BufferList'
 import {
   createHash,
@@ -30,6 +29,7 @@ import {
   FormatError,
   SignatureVerificationFailedError
 } from './errors'
+import { createReaderMachine } from './reader-machine'
 
 const maxLineLength = 1.5 * 1024 * 1024
 
@@ -47,7 +47,8 @@ export default class JoseStreamReader extends Transform {
   private _decryptionKeyPairs: KeyPair[]
   private _ephemeralKey?: KeyObject
   private _bufferList = new BufferList()
-  private _state = 0
+  private _machine
+  private _state
   private _seq = 0
   private _tagHash?: Hash
   private _contentHash?: Hash
@@ -60,6 +61,20 @@ export default class JoseStreamReader extends Transform {
     super()
 
     this._decryptionKeyPairs = options.decryptionKeyPairs
+    this._machine = createReaderMachine({
+      signTags: () => this._tagHash != null,
+      signContent: () => this._contentHash != null
+    })
+    this._state = this._machine.initialState
+  }
+
+  private _stateTransition(event: string) {
+    this._state = this._machine.transition(this._state, event)
+    if (!this._state.changed) {
+      // crunk
+      // <sound of gears grinding>
+      throw new Error('state error')
+    }
   }
 
   _transform(
@@ -114,25 +129,7 @@ export default class JoseStreamReader extends Transform {
       }
     }
 
-    if (end) {
-      if (this._state === 0) {
-        throw new FormatError('header is required')
-      } else if (this._state === 1) {
-        throw new FormatError('body is required')
-      }
-
-      if (this._tagHash != null) {
-        if (!this._finalTagVerified) {
-          throw new SignatureVerificationFailedError()
-        }
-      }
-
-      if (this._contentHash != null) {
-        if (!this._contentVerified) {
-          throw new SignatureVerificationFailedError()
-        }
-      }
-    }
+    if (end) this._stateTransition('END')
 
     if (end && this._decompress != null) this._decompress.end()
   }
@@ -149,36 +146,31 @@ export default class JoseStreamReader extends Transform {
 
     switch (protectedHeader.typ) {
       case 'hdr':
-        if (this._state !== 0) {
-          throw new FormatError('only one header allowed')
-        }
+        this._stateTransition('HEADER')
 
         await this._readHeader(obj)
 
-        ++this._state
         break
 
       case 'tag':
-        if (this._state === 0) {
-          throw new FormatError('tag signature must not appear before header')
+        if (this._state.value === 'header') {
+          this._stateTransition('HEADER_TAG_SIGNATURE')
+        } else {
+          this._stateTransition('TAG_SIGNATURE')
         }
 
         await this._readTagSignature(obj)
 
-        if (this._state === 1) this._headerTagVerified = true
-        else if (this._state === 3) this._finalTagVerified = true
+        if (this._state.value === 'header_tag_signature') {
+          this._headerTagVerified = true
+        } else if (this._state.value === 'tag_signature') {
+          this._finalTagVerified = true
+        }
 
         break
 
       case 'bdy':
-        if (this._state === 0) {
-          throw new FormatError('body must not appear before header')
-        } else if (this._state !== 1) {
-          throw new FormatError('body must not appear after end')
-        }
-        if (this._tagHash != null && this._headerTagVerified !== true) {
-          throw new SignatureVerificationFailedError()
-        }
+        this._stateTransition('BODY')
 
         const { end, plaintext } = await this._readBody(obj)
 
@@ -189,22 +181,17 @@ export default class JoseStreamReader extends Transform {
           this.push(plaintext)
         }
 
-        if (end) ++this._state
+        if (end) this._stateTransition('BODY_END')
 
         break
 
       case 'con':
-        if (this._state !== 2) {
-          throw new FormatError(
-            'content signature must not appear before header or body'
-          )
-        }
+        this._stateTransition('CONTENT_SIGNATURE')
 
         await this._readContentSignature(obj)
 
         this._contentVerified = true
 
-        ++this._state
         break
 
       default:
