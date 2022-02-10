@@ -10,18 +10,15 @@ const stream_1 = require("stream");
 const util_1 = require("util");
 const zlib_1 = require("zlib");
 const errors_1 = require("./errors");
-const reader_machine_1 = require("./reader-machine");
+const machine_1 = require("./machine");
 const maxLineLength = 1.5 * 1024 * 1024;
-class JoseStreamReader extends stream_1.Transform {
+class JostReader extends stream_1.Transform {
     constructor(options) {
         super();
         this._bufferList = new BufferList_1.default();
         this._seq = 0;
-        this._headerTagVerified = false;
-        this._finalTagVerified = false;
-        this._contentVerified = false;
         this._decryptionKeyPairs = options.decryptionKeyPairs;
-        this._machine = (0, reader_machine_1.createReaderMachine)({
+        this._machine = (0, machine_1.createReaderMachine)({
             signTags: () => this._tagHash != null,
             signContent: () => this._contentHash != null
         });
@@ -32,7 +29,10 @@ class JoseStreamReader extends stream_1.Transform {
         if (!this._state.changed) {
             // crunk
             // <sound of gears grinding>
-            throw new Error('state error');
+            if (event === 'END') {
+                throw new errors_1.FormatError('unexpected end of file');
+            }
+            throw new errors_1.FormatError(`can't transition from state '${this._state.value}' with event '${event}'`);
         }
     }
     _transform(chunk, encoding, callback) {
@@ -91,12 +91,6 @@ class JoseStreamReader extends stream_1.Transform {
                     this._stateTransition('TAG_SIGNATURE');
                 }
                 await this._readTagSignature(obj);
-                if (this._state.value === 'header_tag_signature') {
-                    this._headerTagVerified = true;
-                }
-                else if (this._state.value === 'tag_signature') {
-                    this._finalTagVerified = true;
-                }
                 break;
             case 'bdy':
                 this._stateTransition('BODY');
@@ -114,7 +108,6 @@ class JoseStreamReader extends stream_1.Transform {
             case 'con':
                 this._stateTransition('CONTENT_SIGNATURE');
                 await this._readContentSignature(obj);
-                this._contentVerified = true;
                 break;
             default:
                 throw new Error(`unknown type '${protectedHeader.typ}'`);
@@ -237,7 +230,7 @@ class JoseStreamReader extends stream_1.Transform {
         hash.update(chunk);
     }
 }
-exports.default = JoseStreamReader;
+exports.default = JostReader;
 function createDecompress(type) {
     switch (type) {
         case 'gzip':

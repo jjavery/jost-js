@@ -1,4 +1,4 @@
-# JOSE-Stream
+# JOST
 
 Node.js encrypted streams with [JOSE](https://datatracker.ietf.org/doc/html/rfc7165)
 ([JWE](https://datatracker.ietf.org/doc/html/rfc7516),
@@ -14,17 +14,17 @@ Node.js encrypted streams with [JOSE](https://datatracker.ietf.org/doc/html/rfc7
 - Also, multiple layers of Base64 encoding result in bandwidth/storage overhead
   when utilizing sign-encrypt or sign-encrypt-sign
 
-JOSE-Stream proposes a streaming JWE format with optional JWS signing. Plaintext
+JOST proposes a streaming JWE format with optional JWS signing. Plaintext
 is optionally compressed and split into fixed-size chunks. Chunks—along with a
 JWE header and JWS signatures—are streamed in a JSONL line-delimited JSON format.
 
 ### Goals:
 
-- Work within the standard: Read and write JOSE-Stream encoded streams utilizing existing JOSE framework libraries
+- Work within the standard: Read and write JOST encoded streams utilizing existing JOSE framework libraries
 - Optionally include signatures for plaintext and/or ciphertext
 - Optional compression
 
-### JOSE-Stream similar:
+### Similar to JOST:
 
 - [libsodium secretstream](https://libsodium.gitbook.io/doc/secret-key_cryptography/secretstream)
 - [Tink Streaming AEAD](https://github.com/google/tink/blob/master/docs/PRIMITIVES.md#streaming-authenticated-encryption-with-associated-data)

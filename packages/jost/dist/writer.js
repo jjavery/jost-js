@@ -11,7 +11,7 @@ const util_1 = require("util");
 const zlib_1 = require("zlib");
 const generateKey = (0, util_1.promisify)(crypto_1.generateKey);
 const defaultChunkSize = 64 * 1024;
-class JoseStreamWriter extends stream_1.Transform {
+class JostWriter extends stream_1.Transform {
     constructor(options) {
         super();
         this._ephemeralKey = null;
@@ -225,7 +225,7 @@ class JoseStreamWriter extends stream_1.Transform {
         hash.update(chunk);
     }
 }
-exports.default = JoseStreamWriter;
+exports.default = JostWriter;
 function createCompress(type, options) {
     switch (type) {
         case 'gzip':

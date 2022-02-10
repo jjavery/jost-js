@@ -22,7 +22,7 @@ const generateKey = promisify(generateKeyCallback)
 
 const defaultChunkSize = 64 * 1024
 
-interface JoseStreamWriterOptions {
+interface JostWriterOptions {
   chunkSize?: number
   recipients: RecipientOptions[]
   encryption: EncryptionOptions
@@ -103,7 +103,7 @@ export interface CompressionOptions {
   options?: ZlibOptions | BrotliOptions
 }
 
-export default class JoseStreamWriter extends Transform {
+export default class JostWriter extends Transform {
   private _chunkSize: number
   private _recipientOptions: RecipientOptions[]
   private _encryptionOptions: EncryptionOptions
@@ -118,7 +118,7 @@ export default class JoseStreamWriter extends Transform {
   private _compress
   private _compressOutput
 
-  constructor(options: JoseStreamWriterOptions) {
+  constructor(options: JostWriterOptions) {
     super()
 
     this._chunkSize = options.chunkSize ?? defaultChunkSize

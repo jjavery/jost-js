@@ -18,7 +18,7 @@ function signTagsAndDontSignContent(context) {
     return context.signTags() && !context.signContent();
 }
 const config = {
-    id: 'jose-stream',
+    id: 'jost',
     initial: 'initial',
     context: {
         signTags: () => false,
@@ -104,4 +104,4 @@ function createReaderMachine(context) {
     return (0, fsm_1.createMachine)(_config);
 }
 exports.createReaderMachine = createReaderMachine;
-//# sourceMappingURL=reader-machine.js.map
+//# sourceMappingURL=machine.js.map

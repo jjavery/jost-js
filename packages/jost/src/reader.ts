@@ -29,7 +29,7 @@ import {
   FormatError,
   SignatureVerificationFailedError
 } from './errors'
-import { createReaderMachine } from './reader-machine'
+import { createReaderMachine } from './machine'
 
 const maxLineLength = 1.5 * 1024 * 1024
 
@@ -38,11 +38,11 @@ interface KeyPair {
   privateKey: KeyObject
 }
 
-interface JoseStreamReaderOptions {
+interface JostReaderOptions {
   decryptionKeyPairs: KeyPair[]
 }
 
-export default class JoseStreamReader extends Transform {
+export default class JostReader extends Transform {
   publicKey?: KeyObject
   private _decryptionKeyPairs: KeyPair[]
   private _ephemeralKey?: KeyObject
@@ -52,12 +52,9 @@ export default class JoseStreamReader extends Transform {
   private _seq = 0
   private _tagHash?: Hash
   private _contentHash?: Hash
-  private _headerTagVerified = false
-  private _finalTagVerified = false
-  private _contentVerified = false
   private _decompress?: Gunzip | Inflate | BrotliDecompress
 
-  constructor(options: JoseStreamReaderOptions) {
+  constructor(options: JostReaderOptions) {
     super()
 
     this._decryptionKeyPairs = options.decryptionKeyPairs
@@ -73,7 +70,12 @@ export default class JoseStreamReader extends Transform {
     if (!this._state.changed) {
       // crunk
       // <sound of gears grinding>
-      throw new Error('state error')
+      if (event === 'END') {
+        throw new FormatError('unexpected end of file')
+      }
+      throw new FormatError(
+        `can't transition from state '${this._state.value}' with event '${event}'`
+      )
     }
   }
 
@@ -161,12 +163,6 @@ export default class JoseStreamReader extends Transform {
 
         await this._readTagSignature(obj)
 
-        if (this._state.value === 'header_tag_signature') {
-          this._headerTagVerified = true
-        } else if (this._state.value === 'tag_signature') {
-          this._finalTagVerified = true
-        }
-
         break
 
       case 'bdy':
@@ -189,8 +185,6 @@ export default class JoseStreamReader extends Transform {
         this._stateTransition('CONTENT_SIGNATURE')
 
         await this._readContentSignature(obj)
-
-        this._contentVerified = true
 
         break
 

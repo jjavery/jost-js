@@ -1,6 +1,6 @@
 {
-  "name": "jose-stream",
-  "version": "0.3.2",
+  "name": "@jjavery/jost",
+  "version": "0.4.0",
   "description": "Node.js encrypted streams with JOSE (JWE, JWS, JWK) and JSONL",
   "keywords": [
     "encrypt",
@@ -10,13 +10,13 @@
     "JWS",
     "JWK"
   ],
-  "homepage": "https://github.com/jjavery/jose-stream#readme",
-  "bugs": "https://github.com/jjavery/jose-stream/issues",
-  "repository": "jjavery/jose-stream",
+  "homepage": "https://github.com/jjavery/jost#readme",
+  "bugs": "https://github.com/jjavery/jost/issues",
+  "repository": "jjavery/jost",
   "files": [
-    "lib"
+    "dist"
   ],
-  "main": "lib/jose-stream.js",
+  "main": "dist/jost.js",
   "scripts": {
     "build": "tsc",
     "test": "mocha"

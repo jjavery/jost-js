@@ -7,14 +7,14 @@ const fs_1 = require("fs");
 const promises_1 = require("stream/promises");
 const test_1 = require("./test");
 const writer_1 = __importDefault(require("./writer"));
-describe('JoseStreamWriter', () => {
-    it('writes a JOSE stream', async () => {
+describe('JostWriter', () => {
+    it('writes a jost stream', async () => {
         const recipient = {
             key: test_1.ecdhKeyPair.publicKey,
             alg: 'ECDH-ES+A256KW',
             kid: test_1.ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
         };
-        const joseStreamWriter = new writer_1.default({
+        const jostWriter = new writer_1.default({
             recipients: [recipient],
             encryption: {
                 enc: 'A256GCM'
@@ -29,12 +29,12 @@ describe('JoseStreamWriter', () => {
             },
             compression: {
                 type: 'deflate'
-            },
+            }
             // chunkSize: 256
         });
         const input = (0, fs_1.createReadStream)('./test.txt');
-        const output = (0, fs_1.createWriteStream)('./test.jsonl');
-        await (0, promises_1.pipeline)(input, joseStreamWriter, output);
+        const output = (0, fs_1.createWriteStream)('./test-output.jsonl');
+        await (0, promises_1.pipeline)(input, jostWriter, output);
     });
 });
 //# sourceMappingURL=writer.test.js.map

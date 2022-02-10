@@ -21,7 +21,7 @@ function signTagsAndDontSignContent(context: any): boolean {
 }
 
 const config = {
-  id: 'jose-stream',
+  id: 'jost',
   initial: 'initial',
   context: {
     signTags: () => false,
