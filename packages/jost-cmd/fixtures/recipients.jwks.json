@@ -1,0 +1,20 @@
+{
+  "keys": [
+    {
+      "crv": "Ed25519",
+      "x": "-8r38RAtifBlOAOTJU40FwRiE9FHG_gZaccrJtv9hnE",
+      "kty": "OKP",
+      "kid": "joe"
+    }, {
+      "crv": "Ed25519",
+      "x": "amsKQuRJrsslqg80nAm6rUN5yeQNERBBMx424lHBkIY",
+      "kty": "OKP",
+      "kid": "jim"
+    }, {
+      "crv": "Ed25519",
+      "x": "kzDtVmHRzld48CaJtPXxzT0F9iGiBqQSMJFRWJA4eE0",
+      "kty": "OKP",
+      "kid": "jack"
+    }
+  ]
+}

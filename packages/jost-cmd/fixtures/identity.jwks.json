@@ -1,0 +1,11 @@
+{
+  "keys": [
+    {
+      "crv": "Ed25519",
+      "d": "qIoXZSB-2jeA-_Vde7AacgHel8qGH97CP3swTfncCOs",
+      "x": "LX2zJtvLCy2iXXI94I1IJPRgelJ67IdEw7FlGeKzBoY",
+      "kty": "OKP",
+      "ts": "2022-02-12T08:11:53.450Z"
+    }
+  ]
+}
