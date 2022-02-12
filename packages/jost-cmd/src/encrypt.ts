@@ -2,7 +2,12 @@ import { convertEd25519PublicKeyToX25519 } from '@jjavery/ed25519-to-x25519'
 import { program } from 'commander'
 import { createPrivateKey, createPublicKey } from 'crypto'
 import { createReadStream, createWriteStream } from 'fs'
-import { JostWriter, RecipientOptions } from 'jose-stream'
+import {
+  CompressionOptions,
+  JostWriter,
+  RecipientOptions,
+  SignatureOptions
+} from 'jose-stream'
 import { homedir } from 'os'
 import { pipeline } from 'stream/promises'
 import Jwks from './jwks'
@@ -14,6 +19,9 @@ interface EncryptOptions {
   recipient?: string[]
   recipientsFile?: string[]
   identity?: string
+  signature: boolean
+  compress: boolean
+  self: boolean
 }
 
 export default async function encrypt(arg: string, options: EncryptOptions) {
@@ -82,6 +90,13 @@ example: mkdir ${homedir()}/.jost; jost keygen -o '${defaultIdentityPath}'`
     })
   })
 
+  if (options.self === true) {
+    recipients.push({
+      key: convertEd25519PublicKeyToX25519(identity.publicKey),
+      alg: 'ECDH-ES+A256KW'
+    })
+  }
+
   shuffle(recipients)
 
   let input, output
@@ -98,23 +113,34 @@ example: mkdir ${homedir()}/.jost; jost keygen -o '${defaultIdentityPath}'`
     output = process.stdout
   }
 
-  const jostWriter = new JostWriter({
-    recipients,
-    encryption: {
-      enc: 'A256GCM'
-    },
-    signature: {
+  let signature: SignatureOptions | undefined
+
+  if (options.signature === true) {
+    signature = {
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
       alg: 'EdDSA',
       crv: 'Ed25519',
       contentHash: 'blake2b512',
       tagHash: 'blake2b512'
-    },
-    compression: {
-      type: 'deflate'
     }
+  }
+
+  let compression: CompressionOptions | undefined
+
+  if (options.compress === true) {
+    compression = { type: 'deflate' }
+  }
+
+  const jostWriter = new JostWriter({
+    recipients,
+    encryption: {
+      enc: 'A256GCM'
+    },
+    signature,
+    compression
     // chunkSize: 256
+    // chunkSize: 1024 * 1024
   })
 
   await pipeline(input, jostWriter, output)

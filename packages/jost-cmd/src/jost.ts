@@ -1,6 +1,8 @@
 import { Command, Option } from 'commander'
+import decrypt from './decrypt'
 import encrypt from './encrypt'
 import keygen from './keygen'
+import print from './print'
 
 const pkg = require('../package.json')
 
@@ -10,6 +12,35 @@ program
   .name('jost')
   .description(`JOST version ${pkg.version}`)
   .version(pkg.version)
+
+program
+  .command('encrypt')
+  .argument('<input>')
+  .allowExcessArguments(false)
+  .description('Encrypt the input to the output')
+  .option('-o, --output <path>', 'Write the result to the file at path')
+  .option(
+    '-r, --recipient <recipient...>',
+    'Encrypt to the specified recipient'
+  )
+  .option(
+    '-R, --recipients-file <path...>',
+    'Encrypt to the specified recipients listed at path'
+  )
+  .option('-i, --identity <path>', 'Use the identity file at path')
+  .option('--no-compress', "Don't compress the input prior to encryption")
+  .option('--no-sign', "Don't sign the plaintext and ciphertext")
+  .option('--no-self', "Don't add identity to the recipients")
+  .action(encrypt)
+
+program
+  .command('decrypt')
+  .argument('<input>')
+  .allowExcessArguments(false)
+  .description('Decrypt the input to the output')
+  .option('-o, --output <path>', 'Write the result to the file at path')
+  .option('-i, --identity <path...>', 'Use the identity file at path')
+  .action(decrypt)
 
 program
   .command('keygen')
@@ -56,26 +87,16 @@ program
   .action(keygen)
 
 program
-  .command('encrypt')
+  .command('print', { hidden: true })
   .argument('<input>')
   .allowExcessArguments(false)
-  .description('Encrypt the input to the output')
+  .description('Pretty-print the JSONL input to the output')
   .option('-o, --output <path>', 'Write the result to the file at path')
-  .option(
-    '-r, --recipient <recipient...>',
-    'Encrypt to the specified recipient'
-  )
-  .option(
-    '-R, --recipients-file <path...>',
-    'Encrypt to the specified recipients listed at path'
-  )
-  .option('-i, --identity <path>', 'Use the identity file at path')
-  .action(encrypt)
-
-program.command('decrypt').description('Decrypt the input to the output')
+  .action(print)
 
 const argv = [...process.argv]
 
+// TODO: this is a hack
 if ((argv[2] === 'encrypt' || argv[2] === 'decrypt') && argv.length > 4) {
   argv.splice(argv.length - 1, 0, '--')
 }

@@ -33,9 +33,30 @@
       "cwd": "${workspaceFolder}/packages/jost-cmd",
       "args": [
         "encrypt",
-        "-i", "keys.jwks.json",
-        "-r", "asdf",
+        // "--no-compress",
+        "-i",
+        "identity.jwks.json",
+        "-R",
+        "recipients.jwks.json",
+        "-o",
+        "LICENSE.jost.jsonl",
         "LICENSE"
+      ]
+    },
+    {
+      "name": "jost decrypt",
+      "program": "${workspaceFolder}/packages/jost-cmd/dist/jost.js",
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node",
+      "cwd": "${workspaceFolder}/packages/jost-cmd",
+      "args": [
+        "decrypt",
+        "-i",
+        "identity.jwks.json",
+        "-o",
+        "LICENSE_output",
+        "LICENSE.jost.jsonl"
       ]
     },
     {
@@ -45,7 +66,7 @@
       "skipFiles": ["<node_internals>/**"],
       "type": "pwa-node",
       "cwd": "${workspaceFolder}/packages/jost-cmd",
-      "args": ["keygen"]
+      "args": ["keygen", "-o", "identity.jwks.json"]
     }
   ]
 }

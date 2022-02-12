@@ -33,11 +33,11 @@ export default async function (options: any) {
   const keyPair = await generateKeyPair(alg, { crv })
 
   const jwk = await exportJWK(keyPair.privateKey)
-  const pub = await exportJWK(keyPair.publicKey)
+  // const pub = await exportJWK(keyPair.publicKey)
 
   jwk.kid = options.keyId
   jwk.ts = new Date().toJSON()
-  jwk.pub = pub
+  // jwk.pub = pub
 
   jwks.addKey(jwk)
 
