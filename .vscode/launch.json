@@ -5,16 +5,47 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "args": [
-      ],
+      "args": [],
       "internalConsoleOptions": "openOnSessionStart",
-      "name": "Mocha Tests",
-      "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+      "name": "jost Mocha Tests",
+      "program": "${workspaceFolder}/packages/jost/node_modules/mocha/bin/_mocha",
       "request": "launch",
-      "skipFiles": [
-        "<node_internals>/**"
-      ],
-      "type": "pwa-node"
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node",
+      "cwd": "${workspaceFolder}/packages/jost/src"
+    },
+    {
+      "args": [],
+      "internalConsoleOptions": "openOnSessionStart",
+      "name": "jost-cmd Mocha Tests",
+      "program": "${workspaceFolder}/packages/jost-cmd/node_modules/mocha/bin/_mocha",
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node",
+      "cwd": "${workspaceFolder}/packages/jost-cmd"
+    },
+    {
+      "name": "jost encrypt",
+      "program": "${workspaceFolder}/packages/jost-cmd/dist/jost.js",
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node",
+      "cwd": "${workspaceFolder}/packages/jost-cmd",
+      "args": [
+        "encrypt",
+        "-i", "keys.jwks.json",
+        "-r", "asdf",
+        "LICENSE"
+      ]
+    },
+    {
+      "name": "jost keygen",
+      "program": "${workspaceFolder}/packages/jost-cmd/dist/jost.js",
+      "request": "launch",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "pwa-node",
+      "cwd": "${workspaceFolder}/packages/jost-cmd",
+      "args": ["keygen"]
     }
   ]
 }
