@@ -260,11 +260,13 @@ export default class JostWriter extends Transform {
     }
 
     const protectedHeader = {
-      typ: 'hdr',
+      typ: 'jost-hdr',
+      jost: {
+        pub,
+        hsh,
+        cmp: this._compressionOptions?.type
+      },
       enc: this._encryptionOptions.enc,
-      pub,
-      hsh,
-      cmp: this._compressionOptions?.type,
       seq
     }
 
@@ -308,7 +310,7 @@ export default class JostWriter extends Transform {
     const seq = this._seq++
 
     const protectedHeader = {
-      typ: 'bdy',
+      typ: 'jost-bdy',
       alg: 'dir',
       enc: this._encryptionOptions.enc,
       end: end || undefined,
@@ -357,7 +359,7 @@ export default class JostWriter extends Transform {
     const seq = this._seq++
 
     const protectedHeader = {
-      typ: 'con',
+      typ: 'jost-con',
       alg: 'dir',
       enc: this._encryptionOptions.enc,
       seq
@@ -378,19 +380,19 @@ export default class JostWriter extends Transform {
   }
 
   private async _writeTagSignature() {
-    const seq = this._seq++
-
     const options = this._signatureOptions
     if (options == null || this._tagHash == null) return
 
-    const digest = this._tagHash.copy().digest()
+    const seq = this._seq++
 
     const protectedHeader = {
-      typ: 'tag',
+      typ: 'jost-tag',
       alg: options.alg,
       crv: options.crv,
       seq
     }
+
+    const digest = this._tagHash.copy().digest()
 
     const sign = new FlattenedSign(digest).setProtectedHeader(protectedHeader)
 

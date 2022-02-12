@@ -67,7 +67,11 @@ export default class JostReader extends Transform {
 
   private _stateTransition(event: string) {
     this._state = this._machine.transition(this._state, event)
-    if (!this._state.changed) {
+    if (
+      !this._state.changed &&
+      this._state.value != 'body' &&
+      event != 'BODY'
+    ) {
       // crunk
       // <sound of gears grinding>
       if (event === 'END') {
@@ -147,14 +151,14 @@ export default class JostReader extends Transform {
     ++this._seq
 
     switch (protectedHeader.typ) {
-      case 'hdr':
+      case 'jost-hdr':
         this._stateTransition('HEADER')
 
         await this._readHeader(obj)
 
         break
 
-      case 'tag':
+      case 'jost-tag':
         if (this._state.value === 'header') {
           this._stateTransition('HEADER_TAG_SIGNATURE')
         } else {
@@ -165,7 +169,7 @@ export default class JostReader extends Transform {
 
         break
 
-      case 'bdy':
+      case 'jost-bdy':
         this._stateTransition('BODY')
 
         const { end, plaintext } = await this._readBody(obj)
@@ -181,7 +185,7 @@ export default class JostReader extends Transform {
 
         break
 
-      case 'con':
+      case 'jost-con':
         this._stateTransition('CONTENT_SIGNATURE')
 
         await this._readContentSignature(obj)
@@ -222,7 +226,7 @@ export default class JostReader extends Transform {
     this._ephemeralKey = createSecretKey(jwk.k, 'base64url')
     delete jwk.k
 
-    const { pub, hsh, cmp } = result.protectedHeader as any
+    const { pub, hsh, cmp } = result.protectedHeader?.jost as any
 
     if (pub != null) {
       this.publicKey = createPublicKey({
