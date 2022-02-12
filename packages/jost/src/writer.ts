@@ -22,7 +22,7 @@ const generateKey = promisify(generateKeyCallback)
 
 const defaultChunkSize = 64 * 1024
 
-interface JostWriterOptions {
+export interface JostWriterOptions {
   chunkSize?: number
   recipients: RecipientOptions[]
   encryption: EncryptionOptions

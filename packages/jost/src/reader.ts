@@ -33,12 +33,12 @@ import { createReaderMachine } from './machine'
 
 const maxLineLength = 1.5 * 1024 * 1024
 
-interface KeyPair {
+export interface KeyPair {
   publicKey: KeyObject
   privateKey: KeyObject
 }
 
-interface JostReaderOptions {
+export interface JostReaderOptions {
   decryptionKeyPairs: KeyPair[]
 }
 

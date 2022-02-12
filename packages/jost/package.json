@@ -1,5 +1,5 @@
 {
-  "name": "@jjavery/jost",
+  "name": "jose-stream",
   "version": "0.4.0",
   "description": "Node.js encrypted streams with JOSE (JWE, JWS, JWK) and JSONL",
   "keywords": [
@@ -17,6 +17,7 @@
     "dist"
   ],
   "main": "dist/jost.js",
+  "types": "dist/jost.d.ts",
   "scripts": {
     "build": "tsc",
     "test": "mocha"
