@@ -151,14 +151,14 @@ export default class JostReader extends Transform {
     ++this._seq
 
     switch (protectedHeader.typ) {
-      case 'jost-hdr':
+      case 'jose-stream':
         this._stateTransition('HEADER')
 
         await this._readHeader(obj)
 
         break
 
-      case 'jost-tag':
+      case 'tag':
         if (this._state.value === 'header') {
           this._stateTransition('HEADER_TAG_SIGNATURE')
         } else {
@@ -169,7 +169,7 @@ export default class JostReader extends Transform {
 
         break
 
-      case 'jost-bdy':
+      case 'bdy':
         this._stateTransition('BODY')
 
         const { end, plaintext } = await this._readBody(obj)
@@ -185,7 +185,7 @@ export default class JostReader extends Transform {
 
         break
 
-      case 'jost-con':
+      case 'sig':
         this._stateTransition('CONTENT_SIGNATURE')
 
         await this._readContentSignature(obj)
@@ -226,7 +226,7 @@ export default class JostReader extends Transform {
     this._ephemeralKey = createSecretKey(jwk.k, 'base64url')
     delete jwk.k
 
-    const { pub, hsh, cmp } = result.protectedHeader?.jost as any
+    const { pub, hsh, cmp } = result.protectedHeader as any
 
     if (pub != null) {
       this.publicKey = createPublicKey({

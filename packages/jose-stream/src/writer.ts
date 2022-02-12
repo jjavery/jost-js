@@ -260,12 +260,10 @@ export default class JostWriter extends Transform {
     }
 
     const protectedHeader = {
-      typ: 'jost-hdr',
-      jost: {
-        pub,
-        hsh,
-        cmp: this._compressionOptions?.type
-      },
+      typ: 'jose-stream',
+      pub,
+      hsh,
+      cmp: this._compressionOptions?.type,
       enc: this._encryptionOptions.enc,
       seq
     }
@@ -310,7 +308,7 @@ export default class JostWriter extends Transform {
     const seq = this._seq++
 
     const protectedHeader = {
-      typ: 'jost-bdy',
+      typ: 'bdy',
       alg: 'dir',
       enc: this._encryptionOptions.enc,
       end: end || undefined,
@@ -359,7 +357,7 @@ export default class JostWriter extends Transform {
     const seq = this._seq++
 
     const protectedHeader = {
-      typ: 'jost-con',
+      typ: 'sig',
       alg: 'dir',
       enc: this._encryptionOptions.enc,
       seq
@@ -386,7 +384,7 @@ export default class JostWriter extends Transform {
     const seq = this._seq++
 
     const protectedHeader = {
-      typ: 'jost-tag',
+      typ: 'tag',
       alg: options.alg,
       crv: options.crv,
       seq

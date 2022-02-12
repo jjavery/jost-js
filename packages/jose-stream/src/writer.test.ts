@@ -4,7 +4,7 @@ import { ecdhKeyPair, signingKeyPair } from './test'
 import JostWriter, { RecipientOptions, SignatureOptions } from './writer'
 
 describe('JostWriter', () => {
-  it('writes a jost stream', async () => {
+  it('writes a jose-stream', async () => {
     const recipient: RecipientOptions = {
       key: ecdhKeyPair.publicKey,
       alg: 'ECDH-ES+A256KW',
@@ -30,8 +30,8 @@ describe('JostWriter', () => {
       // chunkSize: 256
     })
 
-    const input = createReadStream('./test.txt')
-    const output = createWriteStream('./test-output.jsonl')
+    const input = createReadStream(`${__dirname}/../fixtures/test.txt`)
+    const output = createWriteStream(`${__dirname}/../fixtures/test_output.jsonl`)
 
     await pipeline(input, jostWriter, output)
   })

@@ -78,3 +78,4 @@ typings/
 .DS_Store
 
 dist/
+**/fixtures/*_output*
