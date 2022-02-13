@@ -35,11 +35,11 @@
         "encrypt",
         // "--no-compress",
         "-i",
-        "fixtures/identity.jwks.json",
+        "fixtures/identity.jwks",
         "-R",
-        "fixtures/recipients.jwks.json",
+        "fixtures/recipients.jwks",
         "-o",
-        "LICENSE.jost.jsonl",
+        "LICENSE.jost",
         "LICENSE"
       ]
     },
@@ -53,10 +53,10 @@
       "args": [
         "decrypt",
         "-i",
-        "fixtures/identity.jwks.json",
+        "fixtures/identity.jwks",
         "-o",
         "LICENSE_output",
-        "LICENSE.jost.jsonl"
+        "LICENSE.jost"
       ]
     },
     {
@@ -66,7 +66,7 @@
       "skipFiles": ["<node_internals>/**"],
       "type": "pwa-node",
       "cwd": "${workspaceFolder}/packages/jost-cmd",
-      "args": ["keygen", "-o", "fixtures/identity.jwks.json"]
+      "args": ["keygen", "-o", "fixtures/identity.jwks"]
     },
     {
       "name": "jost export",
@@ -75,7 +75,7 @@
       "skipFiles": ["<node_internals>/**"],
       "type": "pwa-node",
       "cwd": "${workspaceFolder}/packages/jost-cmd",
-      "args": ["export", "-i", "fixtures/identity.jwks.json"]
+      "args": ["export", "-i", "fixtures/identity.jwks"]
     }
   ]
 }

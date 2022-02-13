@@ -18,7 +18,7 @@ program
   .command('encrypt')
   .argument('<input>')
   .allowExcessArguments(false)
-  .description('Encrypt the input to the output')
+  .description('Encrypt the input')
   .option(
     '-r, --recipient <recipient...>',
     'Encrypt to the specified recipient'
@@ -50,7 +50,7 @@ program
   .command('decrypt')
   .argument('<input>')
   .allowExcessArguments(false)
-  .description('Decrypt the input to the output')
+  .description('Decrypt the input')
   .option('-i, --identity <path...>', 'Use the identity file at path')
   .option('-o, --output <path>', 'Write the result to the file at path')
   .action(decrypt)
@@ -102,7 +102,7 @@ program
 program
   .command('export')
   .allowExcessArguments(false)
-  .description('Export the public key from the identity to the output')
+  .description('Export a public key')
   .option('-i, --identity <path...>', 'Use the identity file at path')
   .option('-o, --output <path>', 'Add the exported key to the JWKS file at path')
   .option('-d, --key-id <kid>', 'Exports the key with the specified id')
@@ -112,7 +112,7 @@ program
   .command('print', { hidden: true })
   .argument('<input>')
   .allowExcessArguments(false)
-  .description('Pretty-print the JSONL input to the output')
+  .description('Pretty-print the JOSE stream')
   .option('-o, --output <path>', 'Write the result to the file at path')
   .action(print)
 

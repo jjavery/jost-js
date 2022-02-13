@@ -5,7 +5,7 @@ import { homedir } from 'os'
 import { Readable, Writable } from 'stream'
 import Jwks from './jwks'
 
-const defaultIdentityPath = `${homedir()}/.jost/identity.jwks.json`
+const defaultIdentityPath = `${homedir()}/.jost/identity.jwks`
 
 interface IdentityOptions {
   identity?: string | string[]

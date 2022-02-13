@@ -7,7 +7,9 @@
     "source.addMissingImports": true,
   },
   "files.associations": {
-    "*.jsonl": "jupyter"
+    "*.jsonl": "jupyter",
+    "*.jost": "jupyter",
+    "*.jwks": "json"
   },
   "typescript.format.semicolons": "remove",
   "prettier.semi": false,
