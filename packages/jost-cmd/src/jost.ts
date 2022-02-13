@@ -1,6 +1,7 @@
 import { Command, Option } from 'commander'
 import decrypt from './commands/decrypt'
 import encrypt from './commands/encrypt'
+import export_ from './commands/export'
 import keygen from './commands/keygen'
 import print from './commands/print'
 
@@ -85,6 +86,14 @@ program
       .default('Ed25519')
   )
   .action(keygen)
+
+program
+  .command('export')
+  .allowExcessArguments(false)
+  .description('Export the public key from the identity to the output')
+  .option('-i, --identity <path...>', 'Use the identity file at path')
+  .option('-o, --output <path>', 'Write the result to the file at path')
+  .action(export_)
 
 program
   .command('print', { hidden: true })
