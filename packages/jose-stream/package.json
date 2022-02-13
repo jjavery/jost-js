@@ -4,6 +4,9 @@
   "description": "Node.js encrypted streams with JOSE (JWE, JWS, JWK) and JSONL",
   "keywords": [
     "encrypt",
+    "decrypt",
+    "sign",
+    "verify",
     "stream",
     "JOSE",
     "JWE",

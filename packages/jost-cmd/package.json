@@ -1,14 +1,31 @@
 {
   "name": "jost-cmd",
   "version": "0.1.0",
-  "description": "",
+  "description": "JOST is a command line tool for working with (JO)SE (ST)reams",
+  "keywords": [
+    "encrypt",
+    "decrypt",
+    "sign",
+    "verify",
+    "stream",
+    "JOSE",
+    "JWE",
+    "JWS",
+    "JWK"
+  ],
+  "homepage": "https://github.com/jjavery/jost-js/tree/main/packages/jost-cmd#readme",
+  "bugs": "https://github.com/jjavery/jost-js/issues",
+  "repository": "jjavery/jost-js",
+  "files": [
+    "dist"
+  ],
   "main": "dist/jost.js",
   "bin": "bin/jost",
   "scripts": {
     "build": "tsc",
     "test": "mocha"
   },
-  "author": "",
+  "author": "James P. Javery <james.javery@gmail.com> (https://github.com/jjavery)",
   "license": "MIT",
   "dependencies": {
     "@jjavery/ed25519-to-x25519": "^0.2.0",

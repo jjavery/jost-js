@@ -26,6 +26,7 @@ interface EncryptOptions {
 
 export default async function encrypt(arg: string, options: EncryptOptions) {
   if (
+    options.self === false &&
     (options.recipient == null || options.recipient.length === 0) &&
     (options.recipientsFile == null || options.recipientsFile.length === 0)
   ) {
