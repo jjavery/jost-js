@@ -9,7 +9,8 @@
   "files.associations": {
     "*.jsonl": "jupyter",
     "*.jost": "jupyter",
-    "*.jwks": "json"
+    "*.jwks": "json",
+    "*.json": "jsonc"
   },
   "typescript.format.semicolons": "remove",
   "prettier.semi": false,

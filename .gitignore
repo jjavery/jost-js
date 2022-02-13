@@ -63,6 +63,18 @@ typings/
 # next.js build output
 .next
 
+# OS X temporary files
+.DS_Store
+
+# Rush temporary files
+common/deploy/
+common/temp/
+common/autoinstallers/*/.npmrc
+**/.rush/temp/
+
+# Heft
+.heft
+
 # nuxt.js build output
 .nuxt
 
@@ -74,8 +86,6 @@ typings/
 
 # FuseBox cache
 .fusebox/
-
-.DS_Store
 
 dist/
 **/fixtures/*_output*
