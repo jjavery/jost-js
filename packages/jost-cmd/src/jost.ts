@@ -1,8 +1,8 @@
 import { Command, Option } from 'commander'
-import decrypt from './decrypt'
-import encrypt from './encrypt'
-import keygen from './keygen'
-import print from './print'
+import decrypt from './commands/decrypt'
+import encrypt from './commands/encrypt'
+import keygen from './commands/keygen'
+import print from './commands/print'
 
 const pkg = require('../package.json')
 
@@ -18,7 +18,6 @@ program
   .argument('<input>')
   .allowExcessArguments(false)
   .description('Encrypt the input to the output')
-  .option('-o, --output <path>', 'Write the result to the file at path')
   .option(
     '-r, --recipient <recipient...>',
     'Encrypt to the specified recipient'
@@ -28,6 +27,7 @@ program
     'Encrypt to the specified recipients listed at path'
   )
   .option('-i, --identity <path>', 'Use the identity file at path')
+  .option('-o, --output <path>', 'Write the result to the file at path')
   .option('--no-compress', "Don't compress the input prior to encryption")
   .option('--no-sign', "Don't sign the plaintext and ciphertext")
   .option('--no-self', "Don't add identity to the recipients")
@@ -38,8 +38,8 @@ program
   .argument('<input>')
   .allowExcessArguments(false)
   .description('Decrypt the input to the output')
-  .option('-o, --output <path>', 'Write the result to the file at path')
   .option('-i, --identity <path...>', 'Use the identity file at path')
+  .option('-o, --output <path>', 'Write the result to the file at path')
   .action(decrypt)
 
 program

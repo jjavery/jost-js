@@ -1,18 +1,15 @@
 import { convertEd25519PublicKeyToX25519 } from '@jjavery/ed25519-to-x25519'
 import { program } from 'commander'
 import { createPrivateKey, createPublicKey } from 'crypto'
-import { createReadStream, createWriteStream } from 'fs'
 import {
   CompressionOptions,
   JostWriter,
   RecipientOptions,
   SignatureOptions
 } from 'jose-stream'
-import { homedir } from 'os'
 import { pipeline } from 'stream/promises'
-import Jwks from './jwks'
-
-const defaultIdentityPath = `${homedir()}/.jost/identity.jwks.json`
+import Jwks from '../jwks'
+import { getIdentityPaths, getStreams } from '../util'
 
 interface EncryptOptions {
   output?: string
@@ -35,23 +32,11 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
     )
   }
 
-  let identities
+  const identityPaths = await getIdentityPaths(options)
 
-  const identityPath = options.identity || defaultIdentityPath
+  const identityPath = identityPaths[0]
 
-  try {
-    identities = Jwks.fromFile(identityPath)
-  } catch (err: any) {
-    if (options.identity == null) {
-      program.error(
-        `error: required option '-i, --identity <path>' not specified
-or create a default identity file in '${defaultIdentityPath}'
-example: mkdir ${homedir()}/.jost; jost keygen -o '${defaultIdentityPath}'`
-      )
-    } else {
-      throw err
-    }
-  }
+  const identities = Jwks.fromFile(identityPath)
 
   const jwk = identities?.keys[0]
 
@@ -100,20 +85,6 @@ example: mkdir ${homedir()}/.jost; jost keygen -o '${defaultIdentityPath}'`
 
   shuffle(recipients)
 
-  let input, output
-
-  if (arg != null) {
-    input = createReadStream(arg)
-  } else {
-    input = process.stdin
-  }
-
-  if (options.output) {
-    output = createWriteStream(options.output)
-  } else {
-    output = process.stdout
-  }
-
   let signature: SignatureOptions | undefined
 
   if (options.sign === true) {
@@ -143,6 +114,8 @@ example: mkdir ${homedir()}/.jost; jost keygen -o '${defaultIdentityPath}'`
     // chunkSize: 256
     // chunkSize: 1024 * 1024
   })
+
+  let { input, output } = getStreams(arg, options)
 
   await pipeline(input, jostWriter, output)
 }

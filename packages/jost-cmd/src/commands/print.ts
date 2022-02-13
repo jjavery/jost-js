@@ -1,25 +1,12 @@
-import { createReadStream, createWriteStream } from 'fs'
 import * as readline from 'readline'
-import { Writable } from 'stream'
+import { getStreams } from '../util'
 
 interface PrintOptions {
   output?: string
 }
 
 export default async function print(arg: string, options: PrintOptions) {
-  let input, output: Writable
-
-  if (arg != null) {
-    input = createReadStream(arg)
-  } else {
-    input = process.stdin
-  }
-
-  if (options.output) {
-    output = createWriteStream(options.output)
-  } else {
-    output = process.stdout
-  }
+  let { input, output } = getStreams(arg, options)
 
   const lineReader = readline.createInterface({ input })
 
@@ -42,5 +29,6 @@ export default async function print(arg: string, options: PrintOptions) {
 
   lineReader.on('close', () => {
     output.write(']\n')
+    output.end()
   })
 }

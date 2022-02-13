@@ -1,7 +1,7 @@
 import { createWriteStream } from 'fs'
 import { exportJWK, generateKeyPair } from 'jose-stream'
 import { Writable } from 'stream'
-import Jwks from './jwks'
+import Jwks from '../jwks'
 
 export default async function (options: any) {
   let jwks: Jwks
