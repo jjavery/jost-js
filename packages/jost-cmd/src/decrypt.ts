@@ -34,7 +34,7 @@ example: mkdir ${homedir()}/.jost; jost keygen -o '${defaultIdentityPath}'`
 
   const keyPairs: KeyPair[] = []
 
-  options.identity?.forEach((path) => {
+  identityPaths.forEach((path) => {
     const jwks = Jwks.fromFile(path)
 
     jwks.keys.forEach((jwk) => {

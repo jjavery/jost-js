@@ -19,7 +19,7 @@ interface EncryptOptions {
   recipient?: string[]
   recipientsFile?: string[]
   identity?: string
-  signature: boolean
+  sign: boolean
   compress: boolean
   self: boolean
 }
@@ -116,7 +116,7 @@ example: mkdir ${homedir()}/.jost; jost keygen -o '${defaultIdentityPath}'`
 
   let signature: SignatureOptions | undefined
 
-  if (options.signature === true) {
+  if (options.sign === true) {
     signature = {
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
