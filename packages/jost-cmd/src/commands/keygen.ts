@@ -1,29 +1,7 @@
-import { createWriteStream } from 'fs'
 import { exportJWK, generateKeyPair } from 'jose-stream'
-import { Writable } from 'stream'
-import Jwks from '../jwks'
+import { getJwksAndOutput } from '../util'
 
 export default async function (options: any) {
-  let jwks: Jwks
-  let output: Writable
-
-  if (options.output != null) {
-    try {
-      try {
-        jwks = Jwks.fromFile(options.output)
-      } catch (err) {}
-
-      output = createWriteStream(options.output)
-    } catch (err: any) {
-      console.error(err?.message)
-      process.exit(1)
-    }
-  } else {
-    output = process.stdout
-  }
-
-  jwks ??= new Jwks()
-
   let alg = options.algorithm
   let crv
   if (alg === 'EdDSA' || alg === 'ECDH-ES') {
@@ -38,6 +16,8 @@ export default async function (options: any) {
   jwk.kid = options.keyId
   jwk.ts = new Date().toJSON()
   // jwk.pub = pub
+
+  const { jwks, output } = getJwksAndOutput(options.output)
 
   jwks.addKey(jwk)
 

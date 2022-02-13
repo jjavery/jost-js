@@ -3,6 +3,7 @@ import { constants, createReadStream, createWriteStream } from 'fs'
 import { access } from 'fs/promises'
 import { homedir } from 'os'
 import { Readable, Writable } from 'stream'
+import Jwks from './jwks'
 
 const defaultIdentityPath = `${homedir()}/.jost/identity.jwks.json`
 
@@ -77,4 +78,23 @@ export function shuffle(array: any[]) {
   }
 
   return array
+}
+
+export function getJwksAndOutput(path?: string) {
+  let jwks: Jwks
+  let output: Writable
+
+  if (path != null) {
+    try {
+      jwks = Jwks.fromFile(path)
+    } catch (err) {}
+
+    output = createWriteStream(path)
+  } else {
+    output = process.stdout
+  }
+
+  jwks ??= new Jwks()
+
+  return { jwks, output }
 }

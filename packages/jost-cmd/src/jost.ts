@@ -104,7 +104,8 @@ program
   .allowExcessArguments(false)
   .description('Export the public key from the identity to the output')
   .option('-i, --identity <path...>', 'Use the identity file at path')
-  .option('-o, --output <path>', 'Write the result to the file at path')
+  .option('-o, --output <path>', 'Add the exported key to the JWKS file at path')
+  .option('-d, --key-id <kid>', 'Exports the key with the specified id')
   .action(export_)
 
 program

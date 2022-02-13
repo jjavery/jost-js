@@ -1,33 +1,42 @@
 import { createPrivateKey, createPublicKey } from 'crypto'
+import { createWriteStream } from 'fs'
+import { Writable } from 'stream'
 import Jwks from '../jwks'
-import { getIdentityPaths, getStreams } from '../util'
+import { getIdentityPaths, getJwksAndOutput } from '../util'
 
 interface ExportOptions {
   identity?: string
   output?: string
+  keyId?: string
 }
 
 export default async function export_(options: ExportOptions) {
   const identityPaths = await getIdentityPaths(options)
 
-  const identityPath = identityPaths[0]
+  const identities = Jwks.fromFile(identityPaths[0])
 
-  const identities = Jwks.fromFile(identityPath)
+  let jwk
 
-  const jwk = identities?.keys[0]
+  if (options.keyId != null) {
+    jwk = identities?.keys.find((key) => key.kid === options.keyId)
+  } else {
+    jwk = identities?.keys[0]
+  }
+
+  if (jwk == null) {
+    throw new Error('key not found')
+  }
 
   const key = createPrivateKey({ key: jwk, format: 'jwk' })
-
   const publicKey = createPublicKey(key)
 
   const publicJwk = publicKey.export({ format: 'jwk' })
 
-  const json = JSON.stringify(publicJwk, null, '  ')
+  const { jwks, output } = getJwksAndOutput(options.output)
 
-  let { output } = getStreams(null, options)
+  jwks.addKey(publicJwk)
 
-  output.write(json)
-  output.write('\n')
+  jwks.write(output)
 
   await new Promise((resolve, reject) => {
     output.end(resolve)
