@@ -11,7 +11,7 @@ const program = new Command()
 
 program
   .name('jost')
-  .description(`JOST version ${pkg.version}`)
+  .description(`JOST is a tool for working with (JO)SE (ST)reams`)
   .version(pkg.version)
 
 program
@@ -32,7 +32,19 @@ program
   .option('--no-compress', "Don't compress the input prior to encryption")
   .option('--no-sign', "Don't sign the plaintext and ciphertext")
   .option('--no-self', "Don't add identity to the recipients")
-  .action(encrypt)
+  .action(async (arg, options) => {
+    if (
+      options.self === false &&
+      (options.recipient == null || options.recipient.length === 0) &&
+      (options.recipientsFile == null || options.recipientsFile.length === 0)
+    ) {
+      program.error(
+        `error: required options '-r, --recipient <path>' or '-R, --recipients-file <path>' not specified`
+      )
+    }
+
+    await encrypt(arg, options)
+  })
 
 program
   .command('decrypt')
@@ -47,7 +59,7 @@ program
   .command('keygen')
   .allowExcessArguments(false)
   .description('Generate a key')
-  .option('-o, --output <path>', 'Write the result to the file at path')
+  .option('-o, --output <path>', 'Add the generated key to the JWKS file at path')
   .option('-d, --key-id <kid>', 'Assigns an id to the generated key')
   .addOption(
     new Option('-a, --algorithm <alg>', 'Key algorithm')

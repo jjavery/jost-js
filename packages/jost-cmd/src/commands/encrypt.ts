@@ -9,7 +9,7 @@ import {
 } from 'jose-stream'
 import { pipeline } from 'stream/promises'
 import Jwks from '../jwks'
-import { getIdentityPaths, getStreams } from '../util'
+import { getIdentityPaths, getStreams, shuffle } from '../util'
 
 interface EncryptOptions {
   output?: string
@@ -22,15 +22,6 @@ interface EncryptOptions {
 }
 
 export default async function encrypt(arg: string, options: EncryptOptions) {
-  if (
-    options.self === false &&
-    (options.recipient == null || options.recipient.length === 0) &&
-    (options.recipientsFile == null || options.recipientsFile.length === 0)
-  ) {
-    program.error(
-      `error: required options '-r, --recipient <path>' or '-R, --recipients-file <path>' not specified`
-    )
-  }
 
   const identityPaths = await getIdentityPaths(options)
 
@@ -118,23 +109,4 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
   let { input, output } = getStreams(arg, options)
 
   await pipeline(input, jostWriter, output)
-}
-
-function shuffle(array: any[]) {
-  let m = array.length,
-    t,
-    i
-
-  // While there remain elements to shuffle...
-  while (m) {
-    // Pick a remaining element...
-    i = Math.floor(Math.random() * m--)
-
-    // And swap it with the current element.
-    t = array[m]
-    array[m] = array[i]
-    array[i] = t
-  }
-
-  return array
 }
