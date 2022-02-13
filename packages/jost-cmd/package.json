@@ -1,6 +1,6 @@
 {
   "name": "jost-cmd",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "JOST is a command line tool for working with (JO)SE (ST)reams",
   "keywords": [
     "encrypt",
@@ -17,10 +17,12 @@
   "bugs": "https://github.com/jjavery/jost-js/issues",
   "repository": "jjavery/jost-js",
   "files": [
+    "bin",
     "dist"
   ],
-  "main": "dist/jost.js",
-  "bin": "bin/jost",
+  "bin": {
+    "jost": "./bin/jost"
+  },
   "scripts": {
     "build": "tsc",
     "test": "mocha"
