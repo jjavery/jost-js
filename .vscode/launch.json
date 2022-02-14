@@ -7,12 +7,12 @@
     {
       "args": [],
       "internalConsoleOptions": "openOnSessionStart",
-      "name": "jost Mocha Tests",
-      "program": "${workspaceFolder}/packages/jost/node_modules/mocha/bin/_mocha",
+      "name": "jose-stream Mocha Tests",
+      "program": "${workspaceFolder}/packages/jose-stream/node_modules/mocha/bin/_mocha",
       "request": "launch",
       "skipFiles": ["<node_internals>/**"],
       "type": "pwa-node",
-      "cwd": "${workspaceFolder}/packages/jost/src"
+      "cwd": "${workspaceFolder}/packages/jose-stream"
     },
     {
       "args": [],

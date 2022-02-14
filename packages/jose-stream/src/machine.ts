@@ -1,25 +1,5 @@
 import { createMachine } from '@xstate/fsm'
 
-function signTags(context: any): boolean {
-  return context.signTags()
-}
-
-function signContent(context: any): boolean {
-  return context.signContent()
-}
-
-function dontSignTags(context: any): boolean {
-  return !context.signTags()
-}
-
-function dontSignTagsOrContent(context: any): boolean {
-  return !context.signTags() || !context.signContent()
-}
-
-function signTagsAndDontSignContent(context: any): boolean {
-  return context.signTags() && !context.signContent()
-}
-
 const config = {
   id: 'jose-stream',
   initial: 'initial',
@@ -101,6 +81,26 @@ const config = {
     },
     complete: {}
   }
+}
+
+function signTags(context: any): boolean {
+  return context.signTags()
+}
+
+function signContent(context: any): boolean {
+  return context.signContent()
+}
+
+function dontSignTags(context: any): boolean {
+  return !context.signTags()
+}
+
+function dontSignTagsOrContent(context: any): boolean {
+  return !context.signTags() || !context.signContent()
+}
+
+function signTagsAndDontSignContent(context: any): boolean {
+  return context.signTags() && !context.signContent()
 }
 
 export function createReaderMachine(context: any) {

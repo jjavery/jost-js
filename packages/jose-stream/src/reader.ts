@@ -15,14 +15,8 @@ import {
 } from 'jose'
 import { Transform, TransformCallback } from 'stream'
 import { promisify } from 'util'
-import {
-  BrotliDecompress,
-  createBrotliDecompress,
-  createGunzip,
-  createInflate,
-  Gunzip,
-  Inflate
-} from 'zlib'
+import { BrotliDecompress, Gunzip, Inflate } from 'zlib'
+import { createDecompress } from './compress'
 import {
   BufferOverflowError,
   DecryptionFailedError,
@@ -32,6 +26,7 @@ import {
 import { createReaderMachine } from './machine'
 
 const maxLineLength = 1.5 * 1024 * 1024
+const lfChar = '\n'.charCodeAt(0)
 
 export interface KeyPair {
   publicKey: KeyObject
@@ -65,7 +60,7 @@ export default class JostReader extends Transform {
     this._state = this._machine.initialState
   }
 
-  private _stateTransition(event: string) {
+  private _transitionState(event: string) {
     this._state = this._machine.transition(this._state, event)
     if (
       !this._state.changed &&
@@ -116,7 +111,7 @@ export default class JostReader extends Transform {
     if (chunk != null && chunk.length > 0) bl.append(chunk)
 
     if (bl.length > 0) {
-      for (let i; (i = end ? bl.length : bl.indexOf(10)), i !== -1; ) {
+      for (let i; (i = end ? bl.length : bl.indexOf(lfChar)), i !== -1; ) {
         if (i > maxLineLength) {
           throw new BufferOverflowError()
         }
@@ -135,7 +130,7 @@ export default class JostReader extends Transform {
       }
     }
 
-    if (end) this._stateTransition('END')
+    if (end) this._transitionState('END')
 
     if (end && this._decompress != null) this._decompress.end()
   }
@@ -152,7 +147,7 @@ export default class JostReader extends Transform {
 
     switch (protectedHeader.typ) {
       case 'jose-stream':
-        this._stateTransition('HEADER')
+        this._transitionState('HEADER')
 
         await this._readHeader(obj)
 
@@ -160,9 +155,9 @@ export default class JostReader extends Transform {
 
       case 'tag':
         if (this._state.value === 'header') {
-          this._stateTransition('HEADER_TAG_SIGNATURE')
+          this._transitionState('HEADER_TAG_SIGNATURE')
         } else {
-          this._stateTransition('TAG_SIGNATURE')
+          this._transitionState('TAG_SIGNATURE')
         }
 
         await this._readTagSignature(obj)
@@ -170,7 +165,7 @@ export default class JostReader extends Transform {
         break
 
       case 'bdy':
-        this._stateTransition('BODY')
+        this._transitionState('BODY')
 
         const { end, plaintext } = await this._readBody(obj)
 
@@ -181,12 +176,12 @@ export default class JostReader extends Transform {
           this.push(plaintext)
         }
 
-        if (end) this._stateTransition('BODY_END')
+        if (end) this._transitionState('BODY_END')
 
         break
 
       case 'sig':
-        this._stateTransition('CONTENT_SIGNATURE')
+        this._transitionState('CONTENT_SIGNATURE')
 
         await this._readContentSignature(obj)
 
@@ -310,7 +305,7 @@ export default class JostReader extends Transform {
     jws.payload = digest.toString('base64url')
 
     try {
-      const result = await flattenedVerify(jws, this.publicKey as KeyObject)
+      await flattenedVerify(jws, this.publicKey as KeyObject)
     } catch (err) {
       throw new SignatureVerificationFailedError()
     }
@@ -324,7 +319,7 @@ export default class JostReader extends Transform {
     jws.payload = digest.toString('base64url')
 
     try {
-      const result = await flattenedVerify(jws, this.publicKey as KeyObject)
+      await flattenedVerify(jws, this.publicKey as KeyObject)
     } catch (err) {
       throw new SignatureVerificationFailedError()
     }
@@ -340,18 +335,5 @@ export default class JostReader extends Transform {
     const hash = this._contentHash
     if (hash == null) return
     hash.update(chunk)
-  }
-}
-
-function createDecompress(type: string): Gunzip | Inflate | BrotliDecompress {
-  switch (type) {
-    case 'gzip':
-      return createGunzip()
-    case 'deflate':
-      return createInflate()
-    case 'br':
-      return createBrotliDecompress()
-    default:
-      throw new Error(`unknown compression type '${type}'`)
   }
 }

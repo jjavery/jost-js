@@ -1,6 +1,14 @@
 {
   "search.exclude": {
-    "**/lib": true
+    "**/.vscode": true,
+    "**/dist": true,
+    "/common": true
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.rush": true
   },
   "editor.codeActionsOnSave": {
     "source.sortImports": true,

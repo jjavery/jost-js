@@ -7,16 +7,8 @@ import {
 import { FlattenedEncrypt, FlattenedSign, GeneralEncrypt } from 'jose'
 import { Stream, Transform, TransformCallback } from 'stream'
 import { promisify } from 'util'
-import {
-  BrotliCompress,
-  BrotliOptions,
-  createBrotliCompress,
-  createDeflate,
-  createGzip,
-  Deflate,
-  Gzip,
-  ZlibOptions
-} from 'zlib'
+import { BrotliOptions, ZlibOptions } from 'zlib'
+import { createCompress } from './compress'
 
 const generateKey = promisify(generateKeyCallback)
 
@@ -416,21 +408,5 @@ export default class JostWriter extends Transform {
     const hash = this._contentHash
     if (hash == null) return
     hash.update(chunk)
-  }
-}
-
-function createCompress(
-  type: string,
-  options: ZlibOptions | BrotliOptions | undefined
-): Gzip | Deflate | BrotliCompress {
-  switch (type) {
-    case 'gzip':
-      return createGzip(options)
-    case 'deflate':
-      return createDeflate(options)
-    case 'br':
-      return createBrotliCompress(options)
-    default:
-      throw new Error(`unknown compression type '${type}'`)
   }
 }
