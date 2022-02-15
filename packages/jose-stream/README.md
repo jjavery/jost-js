@@ -68,7 +68,7 @@ A body instance is a JWE using the
 [flattened JWE JSON Serialization syntax](https://tools.ietf.org/html/rfc7516#section-7.2.2).
 Its "typ" property is "bdy". It is produced by encrypting a chunk of the
 (optionally compressed) plaintext using the secret key encrypted and base64url
-encoded in the ciphertext property of the header intance. Multiple body
+encoded in the ciphertext property of the header instance. Multiple body
 instances are allowed, one for each fixed-size chunk of the compressed
 plaintext. The final body instance in the jose-stream must include the boolean
 value true in its "end" property.
@@ -77,11 +77,13 @@ value true in its "end" property.
 
 The content signature is a JWE using the
 [flattened JWE JSON Serialization syntax](https://tools.ietf.org/html/rfc7516#section-7.2.2).
-Its "typ" property is "sig". It is produced by encrypting a JWS, which is itself
-produced by signing a digest of the plaintext using the private key
-corresponding to the "pub" public-key included in the header instance. It is
-conditional, and is required if the header instance includes a public key in its
-"pub" value. Otherwise it must not appear in the jose-stream.
+Its "typ" property is "sig". It is produced by encrypting a JWS instance using
+the secret key encrypted and base64url encoded in the ciphertext property of the
+header instance. The JWS instance is produced by signing a digest of the
+plaintext using the private key corresponding to the "pub" public-key included
+in the header instance. It is conditional, and is required if the header
+instance includes a public key in its "pub" value. Otherwise it must not appear
+in the jose-stream.
 
 ### Final Tag Signature
 
