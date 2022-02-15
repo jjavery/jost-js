@@ -7,22 +7,21 @@ describe('JostWriter', () => {
   it('writes a jose-stream', async () => {
     const recipient: RecipientOptions = {
       key: ecdhKeyPair.publicKey,
-      alg: 'ECDH-ES+A256KW',
-      kid: ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
+      algorithm: 'ECDH-ES+A256KW',
+      keyId: ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
     }
 
     const jostWriter = new JostWriter({
       recipients: [recipient],
       encryption: {
-        enc: 'A256GCM'
+        encryption: 'A256GCM'
       },
       signature: {
         publicKey: signingKeyPair.publicKey,
         privateKey: signingKeyPair.privateKey,
-        alg: 'EdDSA',
-        crv: 'Ed25519',
-        contentHash: 'blake2b512',
-        tagHash: 'blake2b512'
+        algorithm: 'EdDSA',
+        curve: 'Ed25519',
+        digest: 'blake2b512'
       },
       compression: {
         type: 'deflate'

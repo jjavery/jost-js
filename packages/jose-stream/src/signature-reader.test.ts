@@ -4,7 +4,7 @@ import SignatureReader from './signature-reader'
 import { signingKeyPair } from './test'
 
 describe('SignatureReader', () => {
-  it.only('reads a signature', async () => {
+  it('reads a signature', async () => {
     const keyId = signingKeyPair.publicKey.export({ format: 'jwk' }).x
 
     const options = {

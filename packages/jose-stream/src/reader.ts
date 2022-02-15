@@ -221,7 +221,7 @@ export default class JostReader extends Transform {
     this._ephemeralKey = createSecretKey(jwk.k, 'base64url')
     delete jwk.k
 
-    const { pub, hsh, cmp } = result.protectedHeader as any
+    const { pub, dig, cmp } = result.protectedHeader as any
 
     if (pub != null) {
       this.publicKey = createPublicKey({
@@ -230,11 +230,9 @@ export default class JostReader extends Transform {
       })
     }
 
-    if (hsh != null) {
-      const { con, tag } = hsh
-
-      if (con != null) this._contentHash = createHash(con)
-      if (tag != null) this._tagHash = createHash(tag)
+    if (dig != null) {
+      this._contentHash = createHash(dig)
+      this._tagHash = createHash(dig)
     }
 
     if (cmp != null) {

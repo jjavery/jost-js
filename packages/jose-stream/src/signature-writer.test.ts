@@ -12,7 +12,7 @@ describe('SignatureWriter', () => {
       key: signingKeyPair.privateKey,
       algorithm: 'EdDSA',
       curve: 'Ed25519',
-      hash: 'sha256'
+      digest: 'sha256'
     }
 
     const signatureWriter = new SignatureWriter(options)

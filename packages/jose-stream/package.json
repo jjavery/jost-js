@@ -1,6 +1,6 @@
 {
   "name": "jose-stream",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Node.js encrypted streams with JOSE (JWE, JWS, JWK) and JSONL",
   "keywords": [
     "encrypt",

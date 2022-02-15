@@ -9,7 +9,7 @@ interface SignatureWriterOptions {
   key: KeyObject
   algorithm: string
   curve?: string
-  hash: string
+  digest: string
 }
 
 export default class SignatureWriter extends Transform {
@@ -17,7 +17,7 @@ export default class SignatureWriter extends Transform {
   private _key: KeyObject
   private _algorithm: string
   private _curve?: string
-  private _hashAlgorithm: string
+  private _digest: string
   private _hash: Hash
   private _lastChar?: number
 
@@ -28,8 +28,8 @@ export default class SignatureWriter extends Transform {
     this._key = options.key
     this._algorithm = options.algorithm
     this._curve = options.curve
-    this._hashAlgorithm = options.hash
-    this._hash = createHash(options.hash)
+    this._digest = options.digest
+    this._hash = createHash(options.digest)
   }
 
   _transform(
@@ -69,7 +69,7 @@ export default class SignatureWriter extends Transform {
       typ: 'sig',
       alg: this._algorithm,
       crv: this._curve,
-      hsh: this._hashAlgorithm,
+      dig: this._digest,
       kid: this._keyId,
       b64: false
     }

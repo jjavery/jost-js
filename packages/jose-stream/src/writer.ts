@@ -24,7 +24,7 @@ export interface JostWriterOptions {
 
 export interface RecipientOptions {
   key: KeyObject
-  alg:
+  algorithm:
     | 'RSA1_5'
     | 'RSA-OAEP'
     | 'RSA-OAEP-256'
@@ -42,11 +42,11 @@ export interface RecipientOptions {
     | 'PBES2-HS256+A128KW'
     | 'PBES2-HS384+A384KW'
     | 'PBES2-HS512+A256KW'
-  kid?: string
+  keyId?: string
 }
 
 export interface EncryptionOptions {
-  enc:
+  encryption:
     | 'A128CBC-HS256'
     | 'A192CBC-HS384'
     | 'A256CBC-HS512'
@@ -59,7 +59,7 @@ export interface SignatureOptions {
   publicKey?: KeyObject
   privateKey?: KeyObject
   secretKey?: KeyObject
-  alg:
+  algorithm:
     | 'HS256'
     | 'HS384'
     | 'HS512'
@@ -73,15 +73,8 @@ export interface SignatureOptions {
     | 'PS384'
     | 'PS512'
     | 'EdDSA'
-  crv?: 'Ed25519' | 'Ed448'
-  tagHash?:
-    | 'sha256'
-    | 'sha384'
-    | 'sha512'
-    | 'sha512-256'
-    | 'blake2b512'
-    | 'blake2s256'
-  contentHash?:
+  curve?: 'Ed25519' | 'Ed448'
+  digest?:
     | 'sha256'
     | 'sha384'
     | 'sha512'
@@ -125,11 +118,9 @@ export default class JostWriter extends Transform {
       (this._signatureOptions.publicKey != null ||
         this._signatureOptions.secretKey != null)
     ) {
-      if (this._signatureOptions.tagHash != null) {
-        this._tagHash = createHash(this._signatureOptions.tagHash)
-      }
-      if (this._signatureOptions.contentHash != null) {
-        this._contentHash = createHash(this._signatureOptions.contentHash)
+      if (this._signatureOptions.digest != null) {
+        this._tagHash = createHash(this._signatureOptions.digest)
+        this._contentHash = createHash(this._signatureOptions.digest)
       }
     }
 
@@ -222,7 +213,7 @@ export default class JostWriter extends Transform {
   private async _writeHeader() {
     const seq = this._seq++
 
-    const length = parseInt(this._encryptionOptions.enc.substring(1, 4), 10)
+    const length = parseInt(this._encryptionOptions.encryption.substring(1, 4), 10)
     this._ephemeralKey = await generateKey('aes', { length })
     const jwk = this._ephemeralKey.export({ format: 'jwk' })
 
@@ -230,7 +221,7 @@ export default class JostWriter extends Transform {
 
     delete jwk.k
 
-    let pub, hsh, contentHash, tagHash
+    let pub, digest
 
     if (
       this._signatureOptions != null &&
@@ -240,23 +231,15 @@ export default class JostWriter extends Transform {
       if (this._signatureOptions.publicKey != null) {
         pub = this._signatureOptions.publicKey.export({ format: 'jwk' })
       }
-      contentHash = this._signatureOptions.contentHash
-      tagHash = this._signatureOptions.tagHash
-    }
-
-    if (contentHash != null || tagHash != null) {
-      hsh = {
-        con: contentHash,
-        tag: tagHash
-      }
+      digest = this._signatureOptions.digest
     }
 
     const protectedHeader = {
       typ: 'jose-stream',
       pub,
-      hsh,
+      dig: digest,
       cmp: this._compressionOptions?.type,
-      enc: this._encryptionOptions.enc,
+      enc: this._encryptionOptions.encryption,
       seq
     }
 
@@ -267,7 +250,7 @@ export default class JostWriter extends Transform {
     for (const recipient of this._recipientOptions) {
       encrypt
         .addRecipient(recipient.key)
-        .setUnprotectedHeader({ alg: recipient.alg, kid: recipient.kid })
+        .setUnprotectedHeader({ alg: recipient.algorithm, kid: recipient.keyId })
     }
 
     const jwe = await encrypt.encrypt()
@@ -302,7 +285,7 @@ export default class JostWriter extends Transform {
     const protectedHeader = {
       typ: 'bdy',
       alg: 'dir',
-      enc: this._encryptionOptions.enc,
+      enc: this._encryptionOptions.encryption,
       end: end || undefined,
       seq
     }
@@ -328,8 +311,9 @@ export default class JostWriter extends Transform {
     const digest = this._contentHash.digest()
 
     const protectedHeader = {
-      alg: options.alg,
-      crv: options.crv
+      alg: options.algorithm,
+      crv: options.curve,
+      b64: false
     }
 
     const sign = new FlattenedSign(digest).setProtectedHeader(protectedHeader)
@@ -351,7 +335,7 @@ export default class JostWriter extends Transform {
     const protectedHeader = {
       typ: 'sig',
       alg: 'dir',
-      enc: this._encryptionOptions.enc,
+      enc: this._encryptionOptions.encryption,
       seq
     }
 
@@ -377,8 +361,9 @@ export default class JostWriter extends Transform {
 
     const protectedHeader = {
       typ: 'tag',
-      alg: options.alg,
-      crv: options.crv,
+      alg: options.algorithm,
+      crv: options.curve,
+      b64: false,
       seq
     }
 
