@@ -43,7 +43,7 @@ $ npm install jose-stream
 
 ## API Documentation
 
-[jost-stream API Documentation](docs/jose-stream.md)
+[jose-stream API Documentation](docs/jose-stream.md)
 
 ## Format
 

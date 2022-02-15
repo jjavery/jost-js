@@ -5,13 +5,13 @@ import { ecdhKeyPair } from './test'
 
 describe('JoseStreamReader', () => {
   it('reads a jose-stream', async () => {
-    const jostReader = new JoseStreamReader({
+    const joseStreamReader = new JoseStreamReader({
       decryptionKeyPairs: [ecdhKeyPair]
     })
 
     const input = createReadStream(`${__dirname}/../fixtures/test.jsonl`)
     const output = createWriteStream(`${__dirname}/../fixtures/test_output.txt`)
 
-    await pipeline(input, jostReader, output)
+    await pipeline(input, joseStreamReader, output)
   })
 })

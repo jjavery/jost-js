@@ -11,7 +11,7 @@ describe('JoseStreamWriter', () => {
       keyId: ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
     }
 
-    const jostWriter = new JoseStreamWriter({
+    const joseStreamWriter = new JoseStreamWriter({
       recipients: [recipient],
       encryption: {
         encryption: 'A256GCM'
@@ -30,8 +30,10 @@ describe('JoseStreamWriter', () => {
     })
 
     const input = createReadStream(`${__dirname}/../fixtures/test.txt`)
-    const output = createWriteStream(`${__dirname}/../fixtures/test_output.jsonl`)
+    const output = createWriteStream(
+      `${__dirname}/../fixtures/test_output.jsonl`
+    )
 
-    await pipeline(input, jostWriter, output)
+    await pipeline(input, joseStreamWriter, output)
   })
 })
