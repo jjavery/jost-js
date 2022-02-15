@@ -1,6 +1,6 @@
 import { convertEd25519PrivateKeyToX25519 } from '@jjavery/ed25519-to-x25519'
 import { createPrivateKey, createPublicKey } from 'crypto'
-import { JostReader, KeyPair } from 'jose-stream'
+import { JoseStreamReader, KeyPair } from 'jose-stream'
 import { pipeline } from 'stream/promises'
 import Jwks from '../jwks'
 import { getIdentityPaths, getStreams } from '../util'
@@ -28,11 +28,11 @@ export default async function decrypt(arg: string, options: DecryptOptions) {
     })
   })
 
-  const jostReader = new JostReader({
+  const joseStreamReader = new JoseStreamReader({
     decryptionKeyPairs: keyPairs
   })
 
   let { input, output } = getStreams(arg, options)
 
-  await pipeline(input, jostReader, output)
+  await pipeline(input, joseStreamReader, output)
 }

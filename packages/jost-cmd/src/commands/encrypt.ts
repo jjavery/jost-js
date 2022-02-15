@@ -2,7 +2,7 @@ import { convertEd25519PublicKeyToX25519 } from '@jjavery/ed25519-to-x25519'
 import { createPrivateKey, createPublicKey } from 'crypto'
 import {
   CompressionOptions,
-  JostWriter,
+  JoseStreamWriter,
   RecipientOptions,
   SignatureOptions
 } from 'jose-stream'
@@ -21,7 +21,6 @@ interface EncryptOptions {
 }
 
 export default async function encrypt(arg: string, options: EncryptOptions) {
-
   const identityPaths = await getIdentityPaths(options)
 
   const identityPath = identityPaths[0]
@@ -90,10 +89,10 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
   let compression: CompressionOptions | undefined
 
   if (options.compress === true) {
-    compression = { type: 'deflate' }
+    compression = { type: 'DEF' }
   }
 
-  const jostWriter = new JostWriter({
+  const joseStreamWriter = new JoseStreamWriter({
     recipients,
     encryption: {
       encryption: 'A256GCM'
@@ -106,5 +105,5 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
 
   let { input, output } = getStreams(arg, options)
 
-  await pipeline(input, jostWriter, output)
+  await pipeline(input, joseStreamWriter, output)
 }
