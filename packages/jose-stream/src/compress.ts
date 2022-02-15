@@ -19,9 +19,11 @@ export function createCompress(
   type: string,
   options: ZlibOptions | BrotliOptions | undefined
 ): Gzip | Deflate | BrotliCompress {
-  switch (type) {
+  switch (type.toLowerCase()) {
+    case 'gz':
     case 'gzip':
       return createGzip(options)
+    case 'def':
     case 'deflate':
       return createDeflate(options)
     case 'br':
@@ -34,9 +36,11 @@ export function createCompress(
 export function createDecompress(
   type: string
 ): Gunzip | Inflate | BrotliDecompress {
-  switch (type) {
+  switch (type.toLowerCase()) {
+    case 'gz':
     case 'gzip':
       return createGunzip()
+    case 'def':
     case 'deflate':
       return createInflate()
     case 'br':

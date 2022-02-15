@@ -1,6 +1,6 @@
 # JOSE-Stream
 
-Node.js encrypted streams with
+Signed and encrypted streams with
 [JOSE](https://datatracker.ietf.org/doc/html/rfc7165)
 ([JWE](https://datatracker.ietf.org/doc/html/rfc7516),
 [JWS](https://datatracker.ietf.org/doc/html/rfc7515),
@@ -16,19 +16,38 @@ on scalability in memory-constrained and server environments. In addition,
 multiple layers of Base64 encoding result in additional bandwidth and storage
 overhead when utilizing sign-encrypt or sign-encrypt-sign pipelines.
 
-JOSE-Stream proposes a streaming JWE encryption format with JWS signatures.
-Plaintext is compressed and split into fixed-length chunks. Chunks are encrypted
-with JWE and—along with a JWE header and JWS signatures—streamed in the JSONL
-line-delimited JSON format. Compression and signatures are both optional.
+JOSE-Stream proposes a streaming signing and encryption format based on JWS and
+JWE. Plaintext is signed, compressed, and split into fixed-length chunks. Chunks
+are encrypted with JWE and—along with a JWE header and JWS signatures—are
+streamed in the JSONL line-delimited JSON format. Compression and signatures are
+both optional.
 
 For implementation examples see
 [JOST](https://github.com/jjavery/jost-js/tree/main/packages/jost-cmd),
 a command line tool for working with JOSE streams, which depends upon
 this jose-stream package.
 
+## Warning
+
+- Beta
+- Until it hits 1.0 there will be frequent changes to API and format
+- Some features not functional or buggy
+- Bug reports welcome
+- PRs welcome but get in touch first
+
+## Install
+
+```bash
+$ npm install jose-stream
+```
+
+## API Documentation
+
+[jost-stream API Documentation](docs/jose-stream.md)
+
 ## Format
 
-- Newline-delimited, one JSON per line.
+- Newline-delimited UTF-8, one JSON per line.
 - LF is preferred, but CRLF is allowed, as JSON parsers will eat the CR as
   whitespace
 - Each line contains one complete JWE or JWS serialization, which itself must
@@ -46,11 +65,12 @@ The header is a JWE using the
 [fully general JWE JSON Serialization syntax](https://tools.ietf.org/html/rfc7516#section-7.2.1).
 Its "typ" property is "jose-stream". It carries:
 
-- The secret key used to encrypt all subsequent JWE instances
+- In the ciphertext, the secret key used to encrypt all subsequent JWE instances
 - (Optionally) the public key corresponding to the private key used to sign all
   subsequent JWS instances
 - The identities of the digest, compression, and encryption algorithms used with
-  subsequent JWE and JWS instances
+  subsequent JWE and JWS instances, in the "dig", "cmp", and "enc" properties,
+  respectively
 
 ### Header Tag Signature
 
@@ -174,6 +194,12 @@ compress          = ? compression function defined by protected.cmp in
 newline           = "\n";
 </pre>
 
+### State diagram
+
+Magnifying glass not included
+
+![An XState state diagram](state.jpeg)
+
 ### Example jose-stream formatted file
 
 An example of a jose-stream formatted file with a single recipient, with
@@ -264,8 +290,17 @@ each newline marked explicitly:
 
 ## Goals:
 
+- Be secure. Follow best practices.
 - Work within the standards: Read and write JOSE-Stream encoded streams
-  utilizing existing JOSE framework libraries
+  utilizing existing JOSE framework libraries. Try to invent as little as
+  possible.
+- Allow stream readers to invalidate a stream as early as is practical, e.g.
+  after reading a header without a valid public key, or a missing header tag
+  signature, or a body chunk that can't be decrypted.
+- Eventual binary format(s) (BSON? protobuf?). This should not be difficult
+  given that JOSE uses base64url encoding to establish boundaries between
+  format-sensitive and format-insensitive portions of the standard
+  (see: [RFC 7165 § 6.3 D2 Avoid JSON canonicalization to the extent possible](https://datatracker.ietf.org/doc/html/rfc7165#section-6.3).)
 
 ## Similar to JOSE-Stream:
 

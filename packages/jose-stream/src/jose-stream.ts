@@ -1,9 +1,13 @@
-export { default as JostReader, JostReaderOptions, KeyPair } from './reader'
+export {
+  default as JoseStreamReader,
+  JoseStreamReaderOptions,
+  KeyPair
+} from './reader'
 export {
   CompressionOptions,
-  default as JostWriter,
+  default as JoseStreamWriter,
   EncryptionOptions,
-  JostWriterOptions,
+  JoseStreamWriterOptions,
   RecipientOptions,
   SignatureOptions
 } from './writer'

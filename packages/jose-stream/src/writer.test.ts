@@ -1,9 +1,9 @@
 import { createReadStream, createWriteStream } from 'fs'
 import { pipeline } from 'stream/promises'
 import { ecdhKeyPair, signingKeyPair } from './test'
-import JostWriter, { RecipientOptions, SignatureOptions } from './writer'
+import JoseStreamWriter, { RecipientOptions, SignatureOptions } from './writer'
 
-describe('JostWriter', () => {
+describe('JoseStreamWriter', () => {
   it('writes a jose-stream', async () => {
     const recipient: RecipientOptions = {
       key: ecdhKeyPair.publicKey,
@@ -11,7 +11,7 @@ describe('JostWriter', () => {
       keyId: ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
     }
 
-    const jostWriter = new JostWriter({
+    const jostWriter = new JoseStreamWriter({
       recipients: [recipient],
       encryption: {
         encryption: 'A256GCM'
@@ -24,7 +24,7 @@ describe('JostWriter', () => {
         digest: 'blake2b512'
       },
       compression: {
-        type: 'deflate'
+        type: 'DEF'
       }
       // chunkSize: 256
     })

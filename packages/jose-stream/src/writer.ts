@@ -14,7 +14,10 @@ const generateKey = promisify(generateKeyCallback)
 
 const defaultChunkSize = 64 * 1024
 
-export interface JostWriterOptions {
+/**
+ * @public
+ */
+ export interface JoseStreamWriterOptions {
   chunkSize?: number
   recipients: RecipientOptions[]
   encryption: EncryptionOptions
@@ -22,7 +25,10 @@ export interface JostWriterOptions {
   compression?: CompressionOptions
 }
 
-export interface RecipientOptions {
+/**
+ * @public
+ */
+ export interface RecipientOptions {
   key: KeyObject
   algorithm:
     | 'RSA1_5'
@@ -45,7 +51,10 @@ export interface RecipientOptions {
   keyId?: string
 }
 
-export interface EncryptionOptions {
+/**
+ * @public
+ */
+ export interface EncryptionOptions {
   encryption:
     | 'A128CBC-HS256'
     | 'A192CBC-HS384'
@@ -55,7 +64,10 @@ export interface EncryptionOptions {
     | 'A256GCM'
 }
 
-export interface SignatureOptions {
+/**
+ * @public
+ */
+ export interface SignatureOptions {
   publicKey?: KeyObject
   privateKey?: KeyObject
   secretKey?: KeyObject
@@ -83,12 +95,18 @@ export interface SignatureOptions {
     | 'blake2s256'
 }
 
-export interface CompressionOptions {
-  type: 'gzip' | 'deflate' | 'br'
+/**
+ * @public
+ */
+ export interface CompressionOptions {
+  type: 'DEF' | 'GZ' | 'BR'
   options?: ZlibOptions | BrotliOptions
 }
 
-export default class JostWriter extends Transform {
+/**
+ * @public
+ */
+ export default class JoseStreamWriter extends Transform {
   private _chunkSize: number
   private _recipientOptions: RecipientOptions[]
   private _encryptionOptions: EncryptionOptions
@@ -103,7 +121,7 @@ export default class JostWriter extends Transform {
   private _compress
   private _compressOutput
 
-  constructor(options: JostWriterOptions) {
+  constructor(options: JoseStreamWriterOptions) {
     super()
 
     this._chunkSize = options.chunkSize ?? defaultChunkSize
@@ -213,7 +231,10 @@ export default class JostWriter extends Transform {
   private async _writeHeader() {
     const seq = this._seq++
 
-    const length = parseInt(this._encryptionOptions.encryption.substring(1, 4), 10)
+    const length = parseInt(
+      this._encryptionOptions.encryption.substring(1, 4),
+      10
+    )
     this._ephemeralKey = await generateKey('aes', { length })
     const jwk = this._ephemeralKey.export({ format: 'jwk' })
 
@@ -248,9 +269,10 @@ export default class JostWriter extends Transform {
     )
 
     for (const recipient of this._recipientOptions) {
-      encrypt
-        .addRecipient(recipient.key)
-        .setUnprotectedHeader({ alg: recipient.algorithm, kid: recipient.keyId })
+      encrypt.addRecipient(recipient.key).setUnprotectedHeader({
+        alg: recipient.algorithm,
+        kid: recipient.keyId
+      })
     }
 
     const jwe = await encrypt.encrypt()

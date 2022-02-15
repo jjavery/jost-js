@@ -28,16 +28,25 @@ import { createReaderMachine } from './machine'
 const maxLineLength = 1.5 * 1024 * 1024
 const lfChar = '\n'.charCodeAt(0)
 
+/**
+ * @public
+ */
 export interface KeyPair {
   publicKey: KeyObject
   privateKey: KeyObject
 }
 
-export interface JostReaderOptions {
+/**
+ * @public
+ */
+ export interface JoseStreamReaderOptions {
   decryptionKeyPairs: KeyPair[]
 }
 
-export default class JostReader extends Transform {
+/**
+ * @public
+ */
+ export default class JoseStreamReader extends Transform {
   publicKey?: KeyObject
   private _decryptionKeyPairs: KeyPair[]
   private _ephemeralKey?: KeyObject
@@ -49,7 +58,7 @@ export default class JostReader extends Transform {
   private _contentHash?: Hash
   private _decompress?: Gunzip | Inflate | BrotliDecompress
 
-  constructor(options: JostReaderOptions) {
+  constructor(options: JoseStreamReaderOptions) {
     super()
 
     this._decryptionKeyPairs = options.decryptionKeyPairs
@@ -78,6 +87,10 @@ export default class JostReader extends Transform {
     }
   }
 
+  /**
+   *
+   * @internal
+   */
   _transform(
     chunk: Buffer,
     encoding: BufferEncoding,
@@ -86,6 +99,10 @@ export default class JostReader extends Transform {
     this._pushCallback(chunk, false, callback)
   }
 
+  /**
+   *
+   * @internal
+   */
   _flush(callback: TransformCallback): void {
     this._pushCallback(null, true, callback)
   }

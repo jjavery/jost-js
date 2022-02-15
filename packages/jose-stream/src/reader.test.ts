@@ -1,11 +1,11 @@
 import { createReadStream, createWriteStream } from 'fs'
 import { pipeline } from 'stream/promises'
-import JostReader from './reader'
+import JoseStreamReader from './reader'
 import { ecdhKeyPair } from './test'
 
-describe('JostReader', () => {
+describe('JoseStreamReader', () => {
   it('reads a jose-stream', async () => {
-    const jostReader = new JostReader({
+    const jostReader = new JoseStreamReader({
       decryptionKeyPairs: [ecdhKeyPair]
     })
 

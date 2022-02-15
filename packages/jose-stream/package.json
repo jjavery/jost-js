@@ -1,7 +1,7 @@
 {
   "name": "jose-stream",
-  "version": "0.6.0",
-  "description": "Node.js encrypted streams with JOSE (JWE, JWS, JWK) and JSONL",
+  "version": "0.7.0",
+  "description": "Signed and encrypted streams with JOSE (JWE, JWS, JWK) and JSONL",
   "keywords": [
     "encrypt",
     "decrypt",
@@ -23,7 +23,8 @@
   "types": "dist/jose-stream.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "mocha"
+    "test": "mocha",
+    "docs": "scripts/docs.sh"
   },
   "author": "James P. Javery <james.javery@gmail.com> (https://github.com/jjavery)",
   "license": "MIT",
