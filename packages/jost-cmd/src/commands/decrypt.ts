@@ -1,6 +1,5 @@
 import { convertEd25519PrivateKeyToX25519 } from '@jjavery/ed25519-to-x25519'
 import { createPrivateKey, createPublicKey } from 'crypto'
-import { createReadStream, createWriteStream } from 'fs'
 import { JostReader, KeyPair } from 'jose-stream'
 import { pipeline } from 'stream/promises'
 import Jwks from '../jwks'

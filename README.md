@@ -7,5 +7,5 @@ Node.js encrypted streams with [JOSE](https://datatracker.ietf.org/doc/html/rfc7
 
 ### Packages
 
-- [jose-stream](https://github.com/jjavery/jost-js/tree/main/packages/jose-stream)
-- [jost-cmd](https://github.com/jjavery/jost-js/tree/main/packages/jost-cmd)
+- JOSE Stream: [jose-stream](https://github.com/jjavery/jost-js/tree/main/packages/jose-stream)
+- JOST: [jost-cmd](https://github.com/jjavery/jost-js/tree/main/packages/jost-cmd)

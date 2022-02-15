@@ -1,4 +1,4 @@
-import { exportJWK, generateKeyPair } from 'jose-stream'
+import { calculateJwkThumbprint, exportJWK, generateKeyPair } from 'jose'
 import { getJwksAndOutput } from '../util'
 
 export default async function (options: any) {
@@ -13,9 +13,12 @@ export default async function (options: any) {
   const jwk = await exportJWK(keyPair.privateKey)
   // const pub = await exportJWK(keyPair.publicKey)
 
+  const thumbprint = await calculateJwkThumbprint(jwk, 'sha256')
+
   jwk.kid = options.keyId
   jwk.ts = new Date().toJSON()
   // jwk.pub = pub
+  jwk.tpt = thumbprint
 
   const { jwks, output } = getJwksAndOutput(options.output)
 

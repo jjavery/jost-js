@@ -1,5 +1,4 @@
 import { convertEd25519PublicKeyToX25519 } from '@jjavery/ed25519-to-x25519'
-import { program } from 'commander'
 import { createPrivateKey, createPublicKey } from 'crypto'
 import {
   CompressionOptions,
@@ -52,7 +51,7 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
 
     key = convertEd25519PublicKeyToX25519(key)
 
-    recipients.push({ key, alg: 'ECDH-ES+A256KW' })
+    recipients.push({ key, algorithm: 'ECDH-ES+A256KW' })
   })
 
   options.recipientsFile?.forEach((path) => {
@@ -63,14 +62,14 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
 
       key = convertEd25519PublicKeyToX25519(key)
 
-      recipients.push({ key, alg: 'ECDH-ES+A256KW' })
+      recipients.push({ key, algorithm: 'ECDH-ES+A256KW' })
     })
   })
 
   if (options.self === true) {
     recipients.push({
       key: convertEd25519PublicKeyToX25519(identity.publicKey),
-      alg: 'ECDH-ES+A256KW'
+      algorithm: 'ECDH-ES+A256KW'
     })
   }
 
@@ -82,10 +81,9 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
     signature = {
       publicKey: identity.publicKey,
       privateKey: identity.privateKey,
-      alg: 'EdDSA',
-      crv: 'Ed25519',
-      contentHash: 'blake2b512',
-      tagHash: 'blake2b512'
+      algorithm: 'EdDSA',
+      curve: 'Ed25519',
+      digest: 'blake2b512'
     }
   }
 
@@ -98,7 +96,7 @@ export default async function encrypt(arg: string, options: EncryptOptions) {
   const jostWriter = new JostWriter({
     recipients,
     encryption: {
-      enc: 'A256GCM'
+      encryption: 'A256GCM'
     },
     signature,
     compression

@@ -1,6 +1,6 @@
 {
   "name": "jost-cmd",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "JOST is a command line tool for working with (JO)SE (ST)reams",
   "keywords": [
     "encrypt",
@@ -32,7 +32,8 @@
   "dependencies": {
     "@jjavery/ed25519-to-x25519": "^0.2.0",
     "commander": "^9.0.0",
-    "jose-stream": "^0.5.0"
+    "jose-stream": "^0.6.0",
+    "jose": "~4.5.0"
   },
   "devDependencies": {
     "@tsconfig/node14": "^1.0.1",

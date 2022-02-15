@@ -1,6 +1,4 @@
 import { createPrivateKey, createPublicKey } from 'crypto'
-import { createWriteStream } from 'fs'
-import { Writable } from 'stream'
 import Jwks from '../jwks'
 import { getIdentityPaths, getJwksAndOutput } from '../util'
 
