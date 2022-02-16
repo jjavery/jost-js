@@ -5,15 +5,23 @@ include file encryption, decryption, signing, signature verification, and
 key management.
 See: [jose-stream](https://github.com/jjavery/jost-js/tree/main/packages/jose-stream#readme)
 
+## Warning
+
+- Beta
+- Until it hits 1.0 there will be frequent changes to API and format
+- Some features not functional or buggy
+- Bug reports welcome
+- PRs welcome but get in touch first
+
 ## Installation
 
-```bash
+```
 npm install -g jost-cmd
 ```
 
 ## Usage
 
-```bash
+```
 jost --help
 ```
 
@@ -67,6 +75,33 @@ Options:
   -h, --help                display help for command
 ```
 
+### Sign
+
+```
+Usage: jost sign [options] <input>
+
+Sign the input
+
+Options:
+  -i, --identity <path>  Use the identity file at path
+  -o, --output <path>    Write the result to the file at path
+  --detached             Write a detached signature
+  -h, --help             display help for command
+```
+
+### Verify
+
+```
+Usage: jost verify [options] <input>
+
+Verify the input
+
+Options:
+  -K, --keys-file <path...>  Verify the signature using the keys listed at path
+  -o, --output <path>        Write the result to the file at path
+  -h, --help                 display help for command
+```
+
 ### Keygen
 
 ```
@@ -105,20 +140,20 @@ Options:
 
 ### Key Management
 
-```bash
+```
 jost keygen -o secret.jwks
 jost export -o public.jwks
 ```
 
 ### Encrypt/Decrypt
 
-```bash
+```
 jost encrypt -i secret.jwks -o example.jost example.txt
 jost decrypt -i secret.jwks -o example.txt example.jost
 ```
 
 ### Encrypt to someone else's public key
 
-```bash
+```
 jost encrypt -i secret.jwks -R johnsmith.jwks -o example.jost example.txt
 ```

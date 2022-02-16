@@ -4,6 +4,8 @@ import encrypt from './commands/encrypt'
 import export_ from './commands/export'
 import keygen from './commands/keygen'
 import print from './commands/print'
+import sign from './commands/sign'
+import verify from './commands/verify'
 
 const pkg = require('../package.json')
 
@@ -56,10 +58,35 @@ program
   .action(decrypt)
 
 program
+  .command('sign')
+  .argument('<input>')
+  .allowExcessArguments(false)
+  .description('Sign the input')
+  .option('-i, --identity <path>', 'Use the identity file at path')
+  .option('-o, --output <path>', 'Write the result to the file at path')
+  .option('--detached', 'Write a detached signature')
+  .action(sign)
+
+program
+  .command('verify')
+  .argument('<input>')
+  .allowExcessArguments(false)
+  .description('Verify the input')
+  .option(
+    '-K, --keys-file <path...>',
+    'Verify the signature using the keys listed at path'
+  )
+  .option('-o, --output <path>', 'Write the result to the file at path')
+  .action(verify)
+
+program
   .command('keygen')
   .allowExcessArguments(false)
   .description('Generate a key')
-  .option('-o, --output <path>', 'Add the generated key to the JWKS file at path')
+  .option(
+    '-o, --output <path>',
+    'Add the generated key to the JWKS file at path'
+  )
   .option('-d, --key-id <kid>', 'Assigns an id to the generated key')
   .addOption(
     new Option('-a, --algorithm <alg>', 'Key algorithm')
@@ -104,7 +131,10 @@ program
   .allowExcessArguments(false)
   .description('Export a public key')
   .option('-i, --identity <path...>', 'Use the identity file at path')
-  .option('-o, --output <path>', 'Add the exported key to the JWKS file at path')
+  .option(
+    '-o, --output <path>',
+    'Add the exported key to the JWKS file at path'
+  )
   .option('-d, --key-id <kid>', 'Exports the key with the specified id')
   .action(export_)
 
@@ -119,7 +149,7 @@ program
 const argv = [...process.argv]
 
 // TODO: this is a hack
-if ((argv[2] === 'encrypt' || argv[2] === 'decrypt') && argv.length > 4) {
+if ((argv[2] === 'encrypt' || argv[2] === 'decrypt' || argv[2] === 'verify') && argv.length > 4) {
   argv.splice(argv.length - 1, 0, '--')
 }
 
