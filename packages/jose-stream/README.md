@@ -74,6 +74,10 @@ Its "typ" property is "jose-stream". It carries:
 
 ### Header Tag Signature
 
+A tag signature is a JWS signature of the digest of the concatenation of
+base64url decoded authentication tags from all prior JWEs. In the case of
+the header tag signature, there is only one prior JWE — the header.
+
 The header tag signature is a JWS using the
 [flattened JWS JSON Serialization syntax](https://tools.ietf.org/html/rfc7515#section-7.2.2).
 Its "typ" property is "tag". It is produced by signing the base64url decoded
@@ -106,6 +110,9 @@ instance includes a public key in its "pub" value. Otherwise it must not appear
 in the jose-stream.
 
 ### Final Tag Signature
+
+A tag signature is a JWS signature of the digest of the concatenation of
+base64url decoded authentication tags from all prior JWEs.
 
 The final tag signature is a JWS using the
 [flattened JWS JSON Serialization syntax](https://tools.ietf.org/html/rfc7515#section-7.2.2).
@@ -291,6 +298,8 @@ each newline marked explicitly:
 ## Goals:
 
 - Be secure. Follow best practices.
+- Signing always signs both plaintext and ciphertext.
+  [Why?](https://theworld.com/~dtd/sign_encrypt/sign_encrypt7.html)
 - Work within the standards: Read and write JOSE-Stream encoded streams
   utilizing existing JOSE framework libraries. Try to invent as little as
   possible.

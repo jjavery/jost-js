@@ -238,7 +238,7 @@ const defaultChunkSize = 64 * 1024
     this._ephemeralKey = await generateKey('aes', { length })
     const jwk = this._ephemeralKey.export({ format: 'jwk' })
 
-    const plaintext = Buffer.from(JSON.stringify(jwk), 'utf-8')
+    const plaintext = Buffer.from(JSON.stringify(jwk), 'utf8')
 
     delete jwk.k
 

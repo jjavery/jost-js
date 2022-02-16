@@ -10,6 +10,8 @@
 |  --- | --- |
 |  [JoseStreamReader](./jose-stream.josestreamreader.md) |  |
 |  [JoseStreamWriter](./jose-stream.josestreamwriter.md) |  |
+|  [SignatureReader](./jose-stream.signaturereader.md) |  |
+|  [SignatureWriter](./jose-stream.signaturewriter.md) |  |
 
 ## Interfaces
 
@@ -22,4 +24,6 @@
 |  [KeyPair](./jose-stream.keypair.md) |  |
 |  [RecipientOptions](./jose-stream.recipientoptions.md) |  |
 |  [SignatureOptions](./jose-stream.signatureoptions.md) |  |
+|  [SignatureReaderOptions](./jose-stream.signaturereaderoptions.md) |  |
+|  [SignatureWriterOptions](./jose-stream.signaturewriteroptions.md) |  |
 

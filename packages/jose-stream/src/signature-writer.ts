@@ -1,30 +1,43 @@
 import { createHash, Hash, KeyObject } from 'crypto'
 import { FlattenedSign } from 'jose'
-import { Stream, Transform, TransformCallback } from 'stream'
+import { Transform, TransformCallback } from 'stream'
 
 const lfChar = '\n'.charCodeAt(0)
 
-interface SignatureWriterOptions {
+/**
+ * @public
+ */
+ export interface SignatureWriterOptions {
+  detached?: boolean
   keyId?: string
+  publicKey?: KeyObject
   key: KeyObject
   algorithm: string
   curve?: string
   digest: string
 }
 
-export default class SignatureWriter extends Transform {
+/**
+ * @public
+ */
+ export default class SignatureWriter extends Transform {
+  private _detached: boolean
   private _keyId?: string
+  private _publicKey?: KeyObject
   private _key: KeyObject
   private _algorithm: string
   private _curve?: string
   private _digest: string
   private _hash: Hash
+  private _headerWritten = false
   private _lastChar?: number
 
   constructor(options: SignatureWriterOptions) {
     super()
 
+    this._detached = options.detached ?? false
     this._keyId = options.keyId
+    this._publicKey = options.publicKey
     this._key = options.key
     this._algorithm = options.algorithm
     this._curve = options.curve
@@ -37,6 +50,23 @@ export default class SignatureWriter extends Transform {
     encoding: BufferEncoding,
     callback: TransformCallback
   ): void {
+    if (!this._detached && !this._headerWritten) {
+      this._headerWritten = true
+
+      this._writeHeader().then(
+        () => {
+          this._transform2(chunk, callback)
+        },
+        (err) => {
+          queueMicrotask(() => callback(err))
+        }
+      )
+    } else {
+      this._transform2(chunk, callback)
+    }
+  }
+
+  _transform2(chunk: Buffer, callback: TransformCallback) {
     this._hash.update(chunk)
 
     this._lastChar = chunk.at(-1)
@@ -47,6 +77,11 @@ export default class SignatureWriter extends Transform {
   }
 
   _flush(callback: TransformCallback): void {
+    if (this._detached) {
+      queueMicrotask(callback)
+      return
+    }
+
     if (this._lastChar !== lfChar) {
       this._hash.update('\n')
       this.push('\n', 'utf8')
@@ -62,27 +97,53 @@ export default class SignatureWriter extends Transform {
     )
   }
 
-  private async _writeSignature() {
-    const digest = this._hash.digest()
+  private async _writeHeader() {
+    const empty = new Uint8Array()
 
-    const protectedHeader = {
-      typ: 'sig',
-      alg: this._algorithm,
-      crv: this._curve,
-      dig: this._digest,
-      kid: this._keyId,
-      b64: false
-    }
+    const jws: any = await this._sign(empty)
 
-    const sign = new FlattenedSign(digest).setProtectedHeader(protectedHeader)
-
-    const jws: any = await sign.sign(this._key)
-
-    // delete jws.payload
+    delete jws.payload
 
     const json = JSON.stringify(jws)
 
     this.push(json)
     this.push('\n')
+  }
+
+  private async _writeSignature() {
+    const digest = this._hash.digest()
+
+    const jws: any = await this._sign(digest)
+
+    const json = JSON.stringify(jws)
+
+    this.push(json)
+    this.push('\n')
+  }
+
+  async getDetachedSignature() {
+    const digest = this._hash.digest()
+
+    const jws: any = await this._sign(digest)
+
+    return jws
+  }
+
+  private async _sign(payload: Uint8Array) {
+    const jwk = this._publicKey?.export({ format: 'jwk' })
+
+    const protectedHeader = {
+      typ: 'jose-stream-signature',
+      alg: this._algorithm,
+      crv: this._curve,
+      dig: this._digest,
+      kid: this._keyId ?? (jwk?.kid as string),
+      jwk
+    }
+
+    const sign = new FlattenedSign(payload).setProtectedHeader(protectedHeader)
+
+    const jws: any = await sign.sign(this._key)
+    return jws
   }
 }

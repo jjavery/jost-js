@@ -100,6 +100,56 @@ export interface SignatureOptions {
     secretKey?: KeyObject;
 }
 
+// @public (undocumented)
+export class SignatureReader extends Transform {
+    constructor(options: SignatureReaderOptions);
+    // (undocumented)
+    _flush(callback: TransformCallback): void;
+    // (undocumented)
+    _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void;
+}
+
+// @public (undocumented)
+export interface SignatureReaderOptions {
+    // (undocumented)
+    detachedSignature?: string;
+    // (undocumented)
+    getKey?: (header: any, token: any) => Promise<KeyObject>;
+    // (undocumented)
+    key?: KeyObject;
+}
+
+// @public (undocumented)
+export class SignatureWriter extends Transform {
+    constructor(options: SignatureWriterOptions);
+    // (undocumented)
+    _flush(callback: TransformCallback): void;
+    // (undocumented)
+    getDetachedSignature(): Promise<any>;
+    // (undocumented)
+    _transform(chunk: Buffer, encoding: BufferEncoding, callback: TransformCallback): void;
+    // (undocumented)
+    _transform2(chunk: Buffer, callback: TransformCallback): void;
+}
+
+// @public (undocumented)
+export interface SignatureWriterOptions {
+    // (undocumented)
+    algorithm: string;
+    // (undocumented)
+    curve?: string;
+    // (undocumented)
+    detached?: boolean;
+    // (undocumented)
+    digest: string;
+    // (undocumented)
+    key: KeyObject;
+    // (undocumented)
+    keyId?: string;
+    // (undocumented)
+    publicKey?: KeyObject;
+}
+
 // (No @packageDocumentation comment for this package)
 
 ```
