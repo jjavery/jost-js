@@ -17,7 +17,8 @@
   "bugs": "https://github.com/jjavery/jost-js/issues",
   "repository": "jjavery/jost-js",
   "files": [
-    "dist"
+    "dist/*.js",
+    "dist/*.d.ts"
   ],
   "main": "dist/jose-stream.js",
   "types": "dist/jose-stream.d.ts",
