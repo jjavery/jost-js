@@ -7,8 +7,7 @@ describe('JoseStreamWriter', () => {
   it('writes a jose-stream', async () => {
     const recipient: RecipientOptions = {
       key: ecdhKeyPair.publicKey,
-      algorithm: 'ECDH-ES+A256KW',
-      keyId: ecdhKeyPair.publicKey.export({ format: 'jwk' }).x
+      algorithm: 'ECDH-ES+A256KW'
     }
 
     const joseStreamWriter = new JoseStreamWriter({

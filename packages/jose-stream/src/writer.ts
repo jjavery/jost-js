@@ -17,7 +17,7 @@ const defaultChunkSize = 64 * 1024
 /**
  * @public
  */
- export interface JoseStreamWriterOptions {
+export interface JoseStreamWriterOptions {
   chunkSize?: number
   recipients: RecipientOptions[]
   encryption: EncryptionOptions
@@ -28,7 +28,7 @@ const defaultChunkSize = 64 * 1024
 /**
  * @public
  */
- export interface RecipientOptions {
+export interface RecipientOptions {
   key: KeyObject
   algorithm:
     | 'RSA1_5'
@@ -48,13 +48,12 @@ const defaultChunkSize = 64 * 1024
     | 'PBES2-HS256+A128KW'
     | 'PBES2-HS384+A384KW'
     | 'PBES2-HS512+A256KW'
-  keyId?: string
 }
 
 /**
  * @public
  */
- export interface EncryptionOptions {
+export interface EncryptionOptions {
   encryption:
     | 'A128CBC-HS256'
     | 'A192CBC-HS384'
@@ -67,7 +66,7 @@ const defaultChunkSize = 64 * 1024
 /**
  * @public
  */
- export interface SignatureOptions {
+export interface SignatureOptions {
   publicKey?: KeyObject
   privateKey?: KeyObject
   secretKey?: KeyObject
@@ -98,7 +97,7 @@ const defaultChunkSize = 64 * 1024
 /**
  * @public
  */
- export interface CompressionOptions {
+export interface CompressionOptions {
   type: 'DEF' | 'GZ' | 'BR'
   options?: ZlibOptions | BrotliOptions
 }
@@ -106,7 +105,7 @@ const defaultChunkSize = 64 * 1024
 /**
  * @public
  */
- export default class JoseStreamWriter extends Transform {
+export default class JoseStreamWriter extends Transform {
   private _chunkSize: number
   private _recipientOptions: RecipientOptions[]
   private _encryptionOptions: EncryptionOptions
@@ -270,8 +269,7 @@ const defaultChunkSize = 64 * 1024
 
     for (const recipient of this._recipientOptions) {
       encrypt.addRecipient(recipient.key).setUnprotectedHeader({
-        alg: recipient.algorithm,
-        kid: recipient.keyId
+        alg: recipient.algorithm
       })
     }
 
