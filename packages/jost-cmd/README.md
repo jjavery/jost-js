@@ -39,6 +39,8 @@ Options:
 Commands:
   encrypt [options] <input>  Encrypt the input
   decrypt [options] <input>  Decrypt the input
+  sign [options] <input>     Sign the input
+  verify [options] <input>   Verify the input
   keygen [options]           Generate a key
   export [options]           Export a public key
   help [command]             display help for command
